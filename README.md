@@ -20,6 +20,7 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![MapLibre](https://img.shields.io/badge/MapLibre-GL-396CB2?style=flat-square&logo=maplibre&logoColor=white)
 ![No admin](https://img.shields.io/badge/права%20админа-не%20нужны-2ea043?style=flat-square)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 
 [**Сайт**](https://extraut.github.io/MTRTracer/) · [**Документация**](https://extraut.github.io/MTRTracer/docs.html) · [**Скачать**](https://github.com/extraut/MTRTracer/releases/latest)
 
@@ -203,6 +204,12 @@ ui/                     интерфейс: React 19, TypeScript, Vite, Zustand,
 site/                   сайт проекта (GitHub Pages)
 packaging/linux/        install.sh и ярлык .desktop
 ```
+
+## Лицензия
+
+[MIT](LICENSE): программу можно свободно использовать, изменять и распространять, в том числе в коммерческих целях, при сохранении текста лицензии. Предоставляется «как есть», без гарантий.
+
+Сторонние данные и компоненты идут под своими лицензиями: DB-IP Lite (CC BY 4.0), Natural Earth (общественное достояние), шрифты Geist и JetBrains Mono (SIL OFL 1.1), npm- и NuGet-пакеты (их собственные лицензии).
 
 ## Благодарности
 
