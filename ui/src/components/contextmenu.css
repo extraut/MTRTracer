@@ -5,7 +5,7 @@
   max-width: 360px;
   padding: 4px;
   border-radius: 8px;
-  background: oklch(0.22 0.008 265);
+  background: var(--bg-pop);
   box-shadow: var(--shadow-pop);
   animation: ctx-in 120ms var(--ease-out);
 }

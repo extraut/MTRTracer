@@ -151,7 +151,7 @@
   font-size: var(--fs-sm);
   overflow: hidden;
   flex: none;
-  border-bottom: 1px solid oklch(0.67 0.19 27 / 0.3);
+  border-bottom: 1px solid color-mix(in oklab, var(--bad) 30%, transparent);
 }
 .banner svg {
   color: var(--bad);
@@ -208,6 +208,27 @@
 .sb-bad {
   color: var(--bad);
 }
+.sb-link {
+  background: none;
+  border: 0;
+  height: 18px;
+  padding: 0 6px;
+  margin: 0 -6px;
+  border-radius: var(--radius-sm);
+  color: inherit;
+  font-size: inherit;
+  transition: background var(--dur-fast), color var(--dur-fast);
+}
+.sb-link:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+.sb-link.sb-bad {
+  color: var(--bad);
+}
+.sb-update {
+  color: var(--accent);
+}
 
 .toast {
   position: fixed;
@@ -218,7 +239,7 @@
   max-width: min(640px, 90vw);
   padding: 8px 14px;
   border-radius: 8px;
-  background: oklch(0.25 0.01 265);
+  background: var(--bg-pop);
   box-shadow: var(--shadow-pop);
   font-size: var(--fs-sm);
   overflow: hidden;
@@ -226,5 +247,5 @@
   white-space: nowrap;
 }
 .toast.error {
-  background: oklch(0.3 0.06 27);
+  background: color-mix(in oklab, var(--bad) 28%, var(--bg-pop));
 }

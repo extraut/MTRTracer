@@ -12,6 +12,7 @@ using MTRTracer.Core.Logging;
 using MTRTracer.Core.Mtr;
 using MTRTracer.Core.Probing;
 using MTRTracer.Core.Protocol;
+using MTRTracer.Core.Updates;
 
 namespace MTRTracer.Core;
 
@@ -35,6 +36,12 @@ public sealed class AppSettings
     public TraceOptions Options { get; set; } = new();
     public List<string> Recent { get; set; } = [];
     public JsonElement? Ui { get; set; }
+    /// <summary>"ru" | "en"; null = by the system language.</summary>
+    public string? Language { get; set; }
+    public GeoProviders Providers { get; set; } = new();
+    public GeoDbSetting GeoDb { get; set; } = new();
+    /// <summary>GitHub repository checked for updates ("owner/name"); forks can point it at themselves.</summary>
+    public string UpdateRepo { get; set; } = UpdateChecker.DefaultRepo;
 }
 
 public sealed class CommandException(string code, string message) : Exception(message)
@@ -84,14 +91,16 @@ public sealed class AppController : IAsyncDisposable
         Directory.CreateDirectory(geoDir);
         _settingsPath = Path.Combine(dataDir, "settings.json");
         Settings = LoadSettings();
+        Loc.Language = Settings.Language ?? Loc.SystemDefault();
         _http = new HttpClient { Timeout = TimeSpan.FromMinutes(10) };
-        _http.DefaultRequestHeaders.UserAgent.ParseAdd("MTRTracer/1.1");
-        _db = new DbIpDatabase(geoDir);
+        _http.DefaultRequestHeaders.UserAgent.ParseAdd($"MTRTracer/{Version}");
+        _db = new DbIpDatabase(geoDir, Settings.GeoDb) { Enabled = Settings.Providers.OfflineDb };
         _ipApi = new IpApiClient(new HttpClient { Timeout = TimeSpan.FromSeconds(10) }, geoDir);
         _hosts = new HostInfoService(_resolver, _db, _ipApi, geoDir, sink)
         {
             Online = Settings.Options.GeoOnline,
             ResolveNames = Settings.Options.ResolveNames,
+            Providers = Settings.Providers,
         };
         _ipApi.Enabled = Settings.Options.GeoOnline;
         _connections = new ConnectionMonitor(sink, _hosts);
@@ -113,6 +122,22 @@ public sealed class AppController : IAsyncDisposable
         _ = Task.Run(() => _db.EnsureAsync(_http, CancellationToken.None));
     }
 
+    /// <summary>Language from settings.json before the controller exists (for host messages shown early).</summary>
+    public static string PeekLanguage(string dataDir)
+    {
+        try
+        {
+            var path = Path.Combine(dataDir, "settings.json");
+            if (File.Exists(path))
+            {
+                using var doc = JsonDocument.Parse(File.ReadAllText(path));
+                if (doc.RootElement.TryGetProperty("language", out var l) && l.ValueKind == JsonValueKind.String) return Loc.Normalize(l.GetString());
+            }
+        }
+        catch { }
+        return Loc.SystemDefault();
+    }
+
     private AppSettings LoadSettings()
     {
         try
@@ -124,6 +149,10 @@ public sealed class AppController : IAsyncDisposable
                 {
                     s.Options.Normalize();
                     s.Origin ??= new OriginSetting();
+                    s.Providers ??= new GeoProviders();
+                    s.GeoDb = (s.GeoDb ?? new GeoDbSetting()).Normalize();
+                    s.UpdateRepo = UpdateChecker.NormalizeRepo(s.UpdateRepo);
+                    if (s.Language != null) s.Language = Loc.Normalize(s.Language);
                     return s;
                 }
             }
@@ -146,7 +175,12 @@ public sealed class AppController : IAsyncDisposable
         error = _db.Error,
         online = _hosts.Online,
         onlineError = _ipApi.LastError,
+        active = _db.ActiveId,
+        enabled = _db.Enabled,
+        autoUpdate = Settings.GeoDb.AutoUpdate,
     };
+
+    public static string Version => Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "1.1.1";
 
     private void EmitGeoStatus() => _sink.Emit("geo.status", GeoStatus());
 
@@ -174,7 +208,10 @@ public sealed class AppController : IAsyncDisposable
             case "app.info":
                 return new
                 {
-                    version = Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "1.1.0",
+                    version = Version,
+                    language = Loc.Language,
+                    systemLanguage = Loc.SystemDefault(),
+                    repo = Settings.UpdateRepo,
                     isAdmin = Environment.IsPrivilegedProcess,
                     platform = OperatingSystem.IsWindows() ? "windows" : OperatingSystem.IsLinux() ? "linux" : "other",
                     dataDir = DataDir,
@@ -201,6 +238,27 @@ public sealed class AppController : IAsyncDisposable
                     Settings.VpnMode = Arg<bool>(p, "vpnMode");
                     _ = RefreshSelfAsync(false);
                 }
+                if (Has(p, "language"))
+                {
+                    Settings.Language = Arg<string>(p, "language") is { } lang ? Loc.Normalize(lang) : null;
+                    Loc.Language = Settings.Language ?? Loc.SystemDefault();
+                }
+                if (Arg<GeoProviders>(p, "providers") is { } providers)
+                {
+                    Settings.Providers = providers;
+                    _hosts.Providers = providers;
+                    _db.Enabled = providers.OfflineDb;
+                    if (providers.OfflineDb) _hosts.RefreshFromDb();
+                    EmitGeoStatus();
+                }
+                if (Arg<GeoDbSetting>(p, "geoDb") is { } gdb)
+                {
+                    Settings.GeoDb.AutoUpdate = gdb.AutoUpdate;
+                    Settings.GeoDb.UrlTemplate = gdb.UrlTemplate;
+                    Settings.GeoDb.Normalize();
+                    EmitGeoStatus();
+                }
+                if (Has(p, "updateRepo")) Settings.UpdateRepo = UpdateChecker.NormalizeRepo(Arg<string>(p, "updateRepo"));
                 if (Has(p, "vpnServer")) Settings.VpnServer = string.IsNullOrWhiteSpace(Arg<string>(p, "vpnServer")) ? null : Arg<string>(p, "vpnServer")!.Trim();
                 SaveSettings();
                 return Settings;
@@ -217,7 +275,7 @@ public sealed class AppController : IAsyncDisposable
             case "adapters.select":
             {
                 var id = Arg<string>(p, "adapterId");
-                if (id != null && AdapterService.Find(id) == null) throw new CommandException("adapter-missing", "Адаптер не найден.");
+                if (id != null && AdapterService.Find(id) == null) throw new CommandException("adapter-missing", Loc.S("Адаптер не найден.", "Adapter not found."));
                 Settings.AdapterId = id;
                 Settings.AdapterChosen = true;
                 if (Has(p, "vpnMode")) Settings.VpnMode = Arg<bool>(p, "vpnMode");
@@ -236,13 +294,13 @@ public sealed class AppController : IAsyncDisposable
 
             case "tunnel.detect":
             {
-                var id = Arg<string>(p, "adapterId") ?? TunnelAdapterId() ?? throw new CommandException("no-tunnel", "VPN-адаптер не найден.");
+                var id = Arg<string>(p, "adapterId") ?? TunnelAdapterId() ?? throw new CommandException("no-tunnel", Loc.S("VPN-адаптер не найден.", "VPN adapter not found."));
                 return await Task.Run(() => TunnelDetector.Detect(id));
             }
 
             case "trace.start":
             {
-                var target = Arg<string>(p, "target") ?? throw new CommandException("bad-target", "Введите адрес.");
+                var target = Arg<string>(p, "target") ?? throw new CommandException("bad-target", Loc.S("Введите адрес.", "Enter an address."));
                 if (Arg<TraceOptions>(p, "options") is { } o) ApplyOptions(o);
                 if (Has(p, "vpnMode")) Settings.VpnMode = Arg<bool>(p, "vpnMode");
                 Settings.Recent.RemoveAll(r => string.Equals(r, target.Trim(), StringComparison.OrdinalIgnoreCase));
@@ -268,14 +326,14 @@ public sealed class AppController : IAsyncDisposable
 
             case "trace.reset":
             {
-                var input = _session?.State.OverlayInput ?? _session?.State.Input ?? throw new CommandException("no-session", "Нет активной трассировки.");
+                var input = _session?.State.OverlayInput ?? _session?.State.Input ?? throw new CommandException("no-session", Loc.S("Нет активной трассировки.", "No active trace."));
                 return new { sessionId = await StartSessionAsync(input) };
             }
 
             case "trace.pmtu":
             {
-                var s = _session ?? throw new CommandException("no-session", "Сначала запустите трассировку.");
-                var target = s.Target ?? throw new CommandException("no-target", "Цель ещё не определена.");
+                var s = _session ?? throw new CommandException("no-session", Loc.S("Сначала запустите трассировку.", "Start a trace first."));
+                var target = s.Target ?? throw new CommandException("no-target", Loc.S("Цель ещё не определена.", "The target is not resolved yet."));
                 var src = s.State.SourceIp != null && s.State.AdapterId != null ? IPAddress.Parse(s.State.SourceIp) : null;
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 var mtu = await Task.Run(() => PmtuProbe.Discover(target, src, 1500, CancellationToken.None));
@@ -294,8 +352,60 @@ public sealed class AppController : IAsyncDisposable
                 return GeoStatus();
 
             case "geo.download":
-                _ = Task.Run(() => _db.EnsureAsync(_http, CancellationToken.None));
+                _ = Task.Run(() => _db.DownloadReleaseAsync(_http, Arg<string>(p, "month"), prune: false, CancellationToken.None));
                 return null;
+
+            case "geo.db.list":
+                return new { releases = _db.Releases(), active = _db.ActiveId, pinned = Settings.GeoDb.Active, setting = Settings.GeoDb, dir = _db.Directory };
+
+            case "geo.db.available":
+                return await _db.AvailableAsync(_http, Math.Clamp(Arg<int?>(p, "count") ?? 6, 1, 24), CancellationToken.None);
+
+            case "geo.db.use":
+                _db.Use(Arg<string>(p, "id"));
+                Settings.GeoDb.Active = _db.Setting.Active;
+                SaveSettings();
+                _hosts.RefreshFromDb();
+                return new { active = _db.ActiveId };
+
+            case "geo.db.delete":
+            {
+                var id = Arg<string>(p, "id") ?? throw new CommandException("bad-id", "id");
+                _db.Delete(id);
+                Settings.GeoDb.Active = _db.Setting.Active;
+                SaveSettings();
+                return new { active = _db.ActiveId };
+            }
+
+            case "geo.db.import":
+            {
+                var kind = _db.Import(Arg<string>(p, "path") ?? throw new CommandException("bad-path", Loc.S("Укажите файл.", "Choose a file.")));
+                Settings.GeoDb.Active = _db.Setting.Active;
+                SaveSettings();
+                _hosts.RefreshFromDb();
+                return new { kind, active = _db.ActiveId };
+            }
+
+            case "geo.db.fetch":
+            {
+                var kind = await _db.FetchUrlAsync(_http, Arg<string>(p, "url") ?? "", CancellationToken.None);
+                Settings.GeoDb.Active = _db.Setting.Active;
+                SaveSettings();
+                _hosts.RefreshFromDb();
+                return new { kind, active = _db.ActiveId };
+            }
+
+            case "geo.cache.stats":
+                return _hosts.CacheStats();
+
+            case "geo.cache.clear":
+                _hosts.ClearCaches();
+                InvalidateSelf();
+                _ = RefreshSelfAsync(true);
+                return _hosts.CacheStats();
+
+            case "app.checkUpdate":
+                return await UpdateChecker.CheckAsync(_http, Settings.UpdateRepo, Version, CancellationToken.None);
 
             case "geo.self":
                 await RefreshSelfAsync(Arg<bool>(p, "force"));
@@ -336,7 +446,7 @@ public sealed class AppController : IAsyncDisposable
             }
 
             default:
-                throw new CommandException("unknown-command", $"Неизвестная команда {type}");
+                throw new CommandException("unknown-command", Loc.S($"Неизвестная команда {type}", $"Unknown command {type}"));
         }
     }
 
@@ -388,7 +498,7 @@ public sealed class AppController : IAsyncDisposable
 
     private async Task RefreshSelfAsync(bool force)
     {
-        if (!_hosts.Online || Settings.Origin.Mode == "manual") return;
+        if (!_hosts.Online || !Settings.Providers.CloudflareSelf || Settings.Origin.Mode == "manual") return;
         var context = SelfContext();
         if (!force && _self != null && _selfContext == context && GeoCandidate.Now - _self.FetchedAt < 3_600_000) return;
         await _selfLock.WaitAsync();
@@ -409,11 +519,13 @@ public sealed class AppController : IAsyncDisposable
             _selfVia = phys.Name;
             if (meta == null)
             {
-                _selfNote = $"Cloudflare не ответил через «{phys.Name ?? "физический адаптер"}». Точка отсчёта взята по первому узлу провайдера; город можно указать вручную.";
+                _selfNote = Loc.S($"Cloudflare не ответил через «{phys.Name ?? "физический адаптер"}». Точка отсчёта взята по первому узлу провайдера; город можно указать вручную.",
+                    $"Cloudflare did not answer via \"{phys.Name ?? "the physical adapter"}\". The starting point is taken from your provider's first router; you can set your city manually.");
             }
             else if (meta.ClientIp != null && phys.TunnelServers.Contains(meta.ClientIp))
             {
-                _selfNote = $"Запрос через «{phys.Name}» ушёл в VPN: Cloudflare видит адрес сервера VPN {meta.ClientIp} ({meta.City ?? meta.Country}). Это не ваше место, оно не используется. Точка отсчёта взята по первому узлу провайдера; город можно указать вручную.";
+                _selfNote = Loc.S($"Запрос через «{phys.Name}» ушёл в VPN: Cloudflare видит адрес сервера VPN {meta.ClientIp} ({meta.City ?? meta.Country}). Это не ваше место, оно не используется. Точка отсчёта взята по первому узлу провайдера; город можно указать вручную.",
+                    $"The request via \"{phys.Name}\" went into the VPN: Cloudflare sees the VPN server address {meta.ClientIp} ({meta.City ?? meta.Country}). That is not your location and is not used. The starting point is taken from your provider's first router; you can set your city manually.");
             }
             else if (viaTunnel?.ClientIp != null && viaTunnel.ClientIp == meta.ClientIp)
             {
@@ -421,7 +533,8 @@ public sealed class AppController : IAsyncDisposable
                 // Keep it; the route solver checks it against the RTT to your provider's first routers.
                 _self = meta;
                 _selfContext = context;
-                _selfNote = $"Через VPN и напрямую Cloudflare видит один и тот же IP {meta.ClientIp}. Либо VPN пускает Cloudflare мимо туннеля, либо запрос ушёл в туннель. Место ({meta.City}) дополнительно проверяется по задержке до первых узлов провайдера.";
+                _selfNote = Loc.S($"Через VPN и напрямую Cloudflare видит один и тот же IP {meta.ClientIp}. Либо VPN пускает Cloudflare мимо туннеля, либо запрос ушёл в туннель. Место ({meta.City}) дополнительно проверяется по задержке до первых узлов провайдера.",
+                    $"Cloudflare sees the same IP {meta.ClientIp} through the VPN and directly. Either the VPN routes Cloudflare around the tunnel or the request went into the tunnel. The location ({meta.City}) is also checked against the latency to your provider's first routers.");
             }
             else
             {
@@ -461,7 +574,7 @@ public sealed class AppController : IAsyncDisposable
     private GeoPoint? CurrentOrigin()
     {
         var o = Settings.Origin;
-        if (o.Mode == "manual" && o.Lat is { } lat && o.Lon is { } lon) return new GeoPoint(lat, lon, o.Label ?? "вручную", "manual");
+        if (o.Mode == "manual" && o.Lat is { } lat && o.Lon is { } lon) return new GeoPoint(lat, lon, o.Label ?? Loc.S("вручную", "manual"), "manual");
         // Only a value fetched for the current adapter/mode is valid.
         if (_selfContext == SelfContext() && _self?.Latitude is { } sl && _self.Longitude is { } sn) return new GeoPoint(sl, sn, _self.City, "cloudflare");
         return null;
@@ -495,16 +608,17 @@ public sealed class AppController : IAsyncDisposable
             MtrSession session;
             if (Settings.VpnMode && tunnelSelected)
             {
-                var tunnel = TunnelDetector.Detect(selected!.Id) ?? throw new CommandException("vpn-no-tunnel", "VPN-адаптер не найден.");
+                var tunnel = TunnelDetector.Detect(selected!.Id) ?? throw new CommandException("vpn-no-tunnel", Loc.S("VPN-адаптер не найден.", "VPN adapter not found."));
                 TunnelServerCandidate? server = null;
                 if (Settings.VpnServer is { } manual && TargetParser.Parse(manual) is { } ms)
                     server = new TunnelServerCandidate(ms.Host, ms.Port ?? 0, 0);
                 server ??= tunnel.Servers.FirstOrDefault();
                 if (server == null)
                     throw new CommandException("vpn-no-server",
-                        $"Не удалось определить сервер VPN: у {(tunnel.Process ?? "VPN-клиента")} нет TCP-соединений через физический адаптер (вероятно, UDP-протокол). Укажите IP сервера вручную во вкладке «Сведения».");
+                        Loc.S($"Не удалось определить сервер VPN: у {(tunnel.Process ?? "VPN-клиента")} нет TCP-соединений через физический адаптер (вероятно, UDP-протокол). Укажите IP сервера вручную во вкладке «Сведения».",
+                            $"Could not find the VPN server: {(tunnel.Process ?? "the VPN client")} has no TCP connections through the physical adapter (probably a UDP protocol). Enter the server IP manually on the Details tab."));
                 if (tunnel.CarrierId == null)
-                    throw new CommandException("vpn-no-carrier", "Не найден физический адаптер, через который работает туннель.");
+                    throw new CommandException("vpn-no-carrier", Loc.S("Не найден физический адаптер, через который работает туннель.", "The physical adapter the tunnel runs over was not found."));
                 session = new MtrSession(id, server.Ip, Settings.Options, tunnel.CarrierId, _resolver, _sink, SessionsDir, ip => _hosts.Discover(ip));
                 _overlay = new VpnOverlay(session, target, tunnel, server, _hosts, Settings.Options);
             }
@@ -558,7 +672,7 @@ public sealed class AppController : IAsyncDisposable
             var key = TargetKey(target);
             var previous = _history.LastRun(key);
             _runId = _history.StartRun(new RunStart(key, target, TargetParser.Parse(target)?.Host, session.State.OverlayIp ?? session.State.TargetIp,
-                session.State.Mode, adapter?.Id, adapter?.Name ?? "Авто", session.State.SourceIp, _self?.ClientIp,
+                session.State.Mode, adapter?.Id, adapter?.Name ?? Loc.S("Авто", "Auto"), session.State.SourceIp, _self?.ClientIp,
                 DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), Settings.Options));
             if (previous != null) _sink.Emit("history.previous", new { sessionId = session.Id, run = previous });
             var runId = _runId.Value;
@@ -605,8 +719,8 @@ public sealed class AppController : IAsyncDisposable
 
     private object BuildExport(string format)
     {
-        var s = _session ?? throw new CommandException("no-session", "Нет данных для экспорта.");
-        if (s.State.TargetIp == null) throw new CommandException("no-session", "Трассировка ещё не началась.");
+        var s = _session ?? throw new CommandException("no-session", Loc.S("Нет данных для экспорта.", "Nothing to export."));
+        if (s.State.TargetIp == null) throw new CommandException("no-session", Loc.S("Трассировка ещё не началась.", "The trace has not started yet."));
         string? adapterName = null;
         if (s.State.AdapterId != null) adapterName = AdapterService.Find(s.State.AdapterId)?.Name;
         var snap = s.Snapshot();

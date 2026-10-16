@@ -58,7 +58,7 @@ public sealed class VpnOverlay : IAsyncDisposable
     private int _port = 443;
     private double? _setup;
     private bool _faked;
-    private string _status = "запуск";
+    private string _status = Loc.S("запуск", "starting");
 
     public VpnOverlay(MtrSession underlay, string input, TunnelInfo tunnel, TunnelServerCandidate server, HostInfoService hosts, TraceOptions opts)
     {
@@ -91,7 +91,7 @@ public sealed class VpnOverlay : IAsyncDisposable
         var parsed = TargetParser.Parse(_input);
         if (parsed == null)
         {
-            _status = "не удалось распознать адрес";
+            _status = Loc.S("не удалось распознать адрес", "could not parse the address");
             return;
         }
         _host = parsed.Host;
@@ -104,7 +104,7 @@ public sealed class VpnOverlay : IAsyncDisposable
         }
         catch
         {
-            _status = "DNS не ответил";
+            _status = Loc.S("DNS не ответил", "DNS did not answer");
         }
         if (_targetIp == null) return;
         _underlay.State.OverlayIp = AdapterService.Format(_targetIp);
@@ -192,10 +192,10 @@ public sealed class VpnOverlay : IAsyncDisposable
                     ? RouteGeoSolver.Haversine(origin.Lat, origin.Lon, server.Lat!.Value, server.Lon!.Value) + RouteGeoSolver.Haversine(server.Lat.Value, server.Lon!.Value, c.Lat, c.Lon)
                     : RouteGeoSolver.Haversine(origin.Lat, origin.Lon, c.Lat, c.Lon);
                 var allowed = overlayBest.Value * RouteGeoSolver.KmPerMsRtt + RouteGeoSolver.DetourSlackKm;
-                if (path > allowed) reason = $"путь через сервер VPN {Math.Round(path):0} км, а сквозной RTT {overlayBest:0.0} мс допускает {Math.Round(allowed):0} км";
+                if (path > allowed) reason = Loc.S($"путь через сервер VPN {Math.Round(path):0} км, а сквозной RTT {overlayBest:0.0} мс допускает {Math.Round(allowed):0} км", $"the path via the VPN server is {Math.Round(path):0} km, but the end-to-end RTT of {overlayBest:0.0} ms allows {Math.Round(allowed):0} km");
             }
             if (reason == null && chosen == null) chosen = c;
-            verdicts.Add(new CandidateVerdict(c.Source, c.Lat, c.Lon, c.City, c.CountryCode, c.Level, c.FetchedAt, reason == null, reason ?? (ReferenceEquals(c, chosen) ? "выбран" : null)));
+            verdicts.Add(new CandidateVerdict(c.Source, c.Lat, c.Lon, c.City, c.CountryCode, c.Level, c.FetchedAt, reason == null, reason ?? (ReferenceEquals(c, chosen) ? Loc.S("выбран", "chosen") : null)));
         }
         var ip = AdapterService.Format(_targetIp);
         if (chosen != null)
@@ -207,16 +207,16 @@ public sealed class VpnOverlay : IAsyncDisposable
             var lat = _exit?.ColoLat ?? server!.Lat;
             var lon = _exit?.ColoLon ?? server!.Lon;
             return new HopGeoDto(0, ip, lat, lon, "anycast", null, _exit?.ColoCity, null,
-                "anycast: отвечает узел рядом с выходом VPN", verdicts, null);
+                Loc.S("anycast: отвечает узел рядом с выходом VPN", "anycast: the node near the VPN exit answers"), verdicts, null);
         }
         if (info is { Candidates.Count: > 0 })
         {
             var f = RouteGeoSolver.BestUnchecked(info.Candidates);
             return new HopGeoDto(0, ip, f.Lat, f.Lon, "unresolved", f.Source, f.City, f.CountryCode,
-                $"{GeoSources.Label(f.Source)}: место не сходится с измеренной задержкой, показано как есть", verdicts, null);
+                Loc.S($"{GeoSources.Label(f.Source)}: место не сходится с измеренной задержкой, показано как есть", $"{GeoSources.Label(f.Source)}: the location does not match the measured latency, shown as is"), verdicts, null);
         }
         return new HopGeoDto(0, ip, null, null, info == null || info.Pending > 0 ? "pending" : "unresolved", null, null, null,
-            "нет данных о местоположении", verdicts, null);
+            Loc.S("нет данных о местоположении", "no location data"), verdicts, null);
     }
 
     public async ValueTask DisposeAsync()

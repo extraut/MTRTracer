@@ -1,3 +1,4 @@
+import { L } from '../i18n';
 import type { EventMap, RequestMap } from './protocol';
 
 type Listener = (payload: unknown) => void;
@@ -83,7 +84,7 @@ function dispatch(message: unknown) {
     if (!p) return;
     pending.delete(m.id);
     if (m.ok) p.resolve(m.result);
-    else p.reject(new BridgeError(m.error?.code ?? 'error', m.error?.message ?? 'Ошибка'));
+    else p.reject(new BridgeError(m.error?.code ?? 'error', m.error?.message ?? L('Ошибка', 'Error')));
   } else if (m.kind === 'evt' && m.type) {
     listeners.get(m.type)?.forEach((l) => l(m.payload));
   }

@@ -87,7 +87,7 @@ public sealed class MessageBridge
                 var path = Str(p, "path");
                 if (path == "sessions") path = _controller.SessionsDir;
                 else if (path == "data") path = _controller.DataDir;
-                else throw new CommandException("forbidden", "Можно открыть только папки приложения.");
+                else throw new CommandException("forbidden", Loc.S("Можно открыть только папки приложения.", "Only the app's own folders can be opened."));
                 Directory.CreateDirectory(path);
                 Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
                 return null;
@@ -98,7 +98,7 @@ public sealed class MessageBridge
                 // Only reveals an existing executable in Explorer (used for "open process folder").
                 var path = Str(p, "path");
                 if (path == null || !path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) || !File.Exists(path))
-                    throw new CommandException("forbidden", "Файл процесса не найден.");
+                    throw new CommandException("forbidden", Loc.S("Файл процесса не найден.", "Process file not found."));
                 Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{path}\"") { UseShellExecute = true });
                 return null;
             }
@@ -117,12 +117,32 @@ public sealed class MessageBridge
                 var dlg = new SaveFileDialog
                 {
                     FileName = el.GetProperty("fileName").GetString(),
-                    Filter = el.GetProperty("filter").GetString() + "|Все файлы|*.*",
+                    Filter = el.GetProperty("filter").GetString() + Loc.S("|Все файлы|*.*", "|All files|*.*"),
                     InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
                 };
                 if (dlg.ShowDialog(_window) != true) return new { cancelled = true };
                 await File.WriteAllTextAsync(dlg.FileName!, content, new System.Text.UTF8Encoding(true));
                 return new { path = dlg.FileName };
+            }
+
+            case "shell.url":
+            {
+                // External links from the settings window (releases, forks, database pages). https only.
+                var url = Str(p, "url");
+                if (!ExternalLinks.IsAllowed(url)) throw new CommandException("forbidden", Loc.S("Эту ссылку открыть нельзя.", "This link cannot be opened."));
+                Process.Start(new ProcessStartInfo(url!) { UseShellExecute = true });
+                return null;
+            }
+
+            case "file.pick":
+            {
+                var dlg = new OpenFileDialog
+                {
+                    Title = Loc.S("База геоданных MaxMind (.mmdb)", "MaxMind geo database (.mmdb)"),
+                    Filter = Loc.S("Базы MaxMind|*.mmdb;*.gz;*.tgz;*.tar|Все файлы|*.*", "MaxMind databases|*.mmdb;*.gz;*.tgz;*.tar|All files|*.*"),
+                    InitialDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) is { } home ? Path.Combine(home, "Downloads") : null,
+                };
+                return dlg.ShowDialog(_window) == true ? new { path = dlg.FileName } : new { path = (string?)null };
             }
 
             case "process.icon":

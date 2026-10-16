@@ -1,16 +1,20 @@
+import { L, locale } from '../i18n';
+import { palette as theme } from '../theme';
 import { useEffect, useRef, useState } from 'react';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import { series, useStore } from '../store';
 
-const windows = [
-  [60, '1 мин'],
-  [300, '5 мин'],
-  [900, '15 мин'],
-  [0, 'Всё'],
-] as const;
+const windows = () =>
+  [
+    [60, L('1 мин', '1 min')],
+    [300, L('5 мин', '5 min')],
+    [900, L('15 мин', '15 min')],
+    [0, L('Всё', 'All')],
+  ] as const;
 
 const palette = ['#9b9cf0', '#57d29a', '#ecbf4f', '#ee8c4b', '#6fc3f0', '#e58fd8', '#b4d860'];
+const seriesColor = (i: number) => (i === 0 ? theme.accent : palette[(i % (palette.length - 1)) + 1]);
 
 /**
  * RTT over time. Probes are bucketed by the probe interval so every hop shares one time axis;
@@ -43,25 +47,25 @@ export function LatencyChart() {
       cursor: { drag: { x: true, y: false }, points: { size: 6 } },
       scales: { x: { time: true }, y: { range: (_u, _min, max) => [0, Math.max(5, max * 1.12)] } },
       axes: [
-        { stroke: '#7d8090', grid: { stroke: 'rgba(120,124,140,0.12)', width: 1 }, ticks: { stroke: 'rgba(120,124,140,0.2)' }, font: '11px Geist Variable, Segoe UI', size: 28 },
+        { stroke: theme.axis, grid: { stroke: theme.grid, width: 1 }, ticks: { stroke: theme.grid }, font: '11px Geist Variable, Segoe UI', size: 28 },
         {
-          stroke: '#7d8090',
-          grid: { stroke: 'rgba(120,124,140,0.12)', width: 1 },
+          stroke: theme.axis,
+          grid: { stroke: theme.grid, width: 1 },
           ticks: { show: false },
           font: '11px Geist Variable, Segoe UI',
           size: 46,
-          values: (_u, vals) => vals.map((v) => `${v} мс`),
+          values: (_u, vals) => vals.map((v) => `${v} ${L('мс', 'ms')}`),
         },
       ],
       series: [
-        { value: (_u, v) => (v == null ? '—' : new Date(v * 1000).toLocaleTimeString('ru-RU', { hour12: false })) },
+        { value: (_u, v) => (v == null ? '—' : new Date(v * 1000).toLocaleTimeString(locale(), { hour12: false })) },
         ...ttls.map((t, i) => ({
-          label: t === lastTtl ? `Цель (хоп ${t})` : `Хоп ${t}`,
-          stroke: t === lastTtl ? palette[0] : palette[(i % (palette.length - 1)) + 1],
+          label: t === lastTtl ? `${L('Цель (хоп', 'Target (hop')} ${t})` : `${L('Хоп', 'Hop')} ${t}`,
+          stroke: t === lastTtl ? seriesColor(0) : seriesColor(i + 1),
           width: t === lastTtl ? 1.75 : 1.25,
           spanGaps: false,
           points: { show: false },
-          value: (_u: uPlot, v: number | null, _s: number, idx: number | null) => (idx == null ? '—' : v == null ? 'нет ответа' : `${v.toFixed(2)} мс`),
+          value: (_u: uPlot, v: number | null, _s: number, idx: number | null) => (idx == null ? '—' : v == null ? L('нет ответа', 'no reply') : `${v.toFixed(2)} ${L('мс', 'ms')}`),
         })),
       ],
     };
@@ -124,16 +128,16 @@ export function LatencyChart() {
     <div className="panel chart">
       <div className="panel-tools">
         <div className="seg">
-          {windows.map(([w, l]) => (
+          {windows().map(([w, l]) => (
             <button key={w} className={win === w ? 'on' : ''} onClick={() => setWin(w)}>
               {l}
             </button>
           ))}
         </div>
         <button className={`btn sm ${all ? 'active' : ''}`} onClick={() => setAll(!all)}>
-          Все хопы
+          {L('Все хопы', 'All hops')}
         </button>
-        <span className="panel-count">Выделите хоп в таблице, чтобы сравнить его с целью. Протяните мышью по графику для приближения.</span>
+        <span className="panel-count">{L('Выделите хоп в таблице, чтобы сравнить его с целью. Протяните мышью по графику для приближения.', 'Select a hop in the table to compare it with the target. Drag across the chart to zoom.')}</span>
       </div>
       <div className="chart-box" ref={box} />
     </div>

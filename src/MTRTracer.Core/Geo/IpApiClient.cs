@@ -80,6 +80,14 @@ public sealed class IpApiClient
 
     public IpApiRecord? Cached(string ip) => _cache.TryGetValue(ip, out var r) ? r : null;
 
+    public int CacheCount => _cache.Count;
+
+    public void ClearCache()
+    {
+        _cache.Clear();
+        try { File.Delete(_cachePath); } catch { }
+    }
+
     public Task<IpApiRecord?> LookupAsync(IPAddress ip)
     {
         var key = ip.ToString();

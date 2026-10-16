@@ -216,9 +216,9 @@ public static class AdapterService
     public static IPAddress? ResolveSource(string? adapterId, IPAddress destination)
     {
         if (string.IsNullOrEmpty(adapterId)) return null;
-        var ni = Find(adapterId) ?? throw new AdapterException("adapter-missing", "Выбранный адаптер больше не найден в системе.");
+        var ni = Find(adapterId) ?? throw new AdapterException("adapter-missing", Loc.S("Выбранный адаптер больше не найден в системе.", "The selected adapter is no longer present in the system."));
         if (ni.OperationalStatus != OperationalStatus.Up)
-            throw new AdapterException("adapter-down", $"Адаптер «{ni.Name}» отключён.");
+            throw new AdapterException("adapter-down", Loc.S($"Адаптер «{ni.Name}» отключён.", $"Adapter \"{ni.Name}\" is disconnected."));
         var family = destination.AddressFamily;
         var candidates = ni.GetIPProperties().UnicastAddresses
             .Select(u => u.Address)
@@ -226,8 +226,8 @@ public static class AdapterService
             .ToList();
         if (candidates.Count == 0)
             throw new AdapterException("no-address", family == AddressFamily.InterNetworkV6
-                ? $"У адаптера «{ni.Name}» нет IPv6-адреса."
-                : $"У адаптера «{ni.Name}» нет IPv4-адреса.");
+                ? Loc.S($"У адаптера «{ni.Name}» нет IPv6-адреса.", $"Adapter \"{ni.Name}\" has no IPv6 address.")
+                : Loc.S($"У адаптера «{ni.Name}» нет IPv4-адреса.", $"Adapter \"{ni.Name}\" has no IPv4 address."));
         if (family == AddressFamily.InterNetworkV6)
         {
             // Prefer global unicast over link-local / temporary scoped addresses.

@@ -1,3 +1,4 @@
+import { L } from '../i18n';
 const R = 6371;
 const rad = (d: number) => (d * Math.PI) / 180;
 const deg = (r: number) => (r * 180) / Math.PI;
@@ -42,21 +43,29 @@ export function facing(center: { lat: number; lng: number }, lon: number, lat: n
   return dot > 0.05;
 }
 
-export const sourceLabel: Record<string, string> = {
-  'ripe-ipmap': 'RIPE IPmap',
-  'cf-colo': 'Cloudflare colo',
-  hint: 'имя роутера',
-  maxmind: 'MaxMind GeoLite (RIPEstat)',
-  dbip: 'DB-IP Lite',
-  ipapi: 'ip-api.com',
-};
+/** Read through a proxy so the current language is used at every access. */
+export const sourceLabel: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get: (_t, key: string | symbol) =>
+    (({
+      'ripe-ipmap': 'RIPE IPmap',
+      'cf-colo': 'Cloudflare colo',
+      hint: L('имя роутера', 'router name'),
+      maxmind: 'MaxMind GeoLite (RIPEstat)',
+      dbip: 'DB-IP Lite',
+      ipapi: 'ip-api.com',
+    }) as Record<string, string>)[key as string],
+});
 
-export const statusLabel: Record<string, string> = {
-  confirmed: 'подтверждено',
-  single: 'один источник',
-  anycast: 'anycast',
-  unresolved: 'не сходится с RTT',
-  pending: 'определяется…',
-  local: 'локальная сеть',
-  silent: 'нет ответа',
-};
+/** Read through a proxy so the current language is used at every access. */
+export const statusLabel: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get: (_t, key: string | symbol) =>
+    (({
+      confirmed: L('подтверждено', 'confirmed'),
+      single: L('один источник', 'single source'),
+      anycast: 'anycast',
+      unresolved: L('не сходится с RTT', 'does not match RTT'),
+      pending: L('определяется…', 'resolving…'),
+      local: L('локальная сеть', 'local network'),
+      silent: L('нет ответа', 'no reply'),
+    }) as Record<string, string>)[key as string],
+});

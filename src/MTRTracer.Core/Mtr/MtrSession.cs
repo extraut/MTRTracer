@@ -135,7 +135,7 @@ public sealed class MtrSession : IAsyncDisposable
         var parsed = TargetParser.Parse(State.Input);
         if (parsed == null)
         {
-            Fail("bad-target", "Не удалось распознать адрес. Введите IP, домен или URL.");
+            Fail("bad-target", Loc.S("Не удалось распознать адрес. Введите IP, домен или URL.", "Could not parse the address. Enter an IP, a domain or a URL."));
             return;
         }
         State.Host = parsed.Host;
@@ -179,12 +179,12 @@ public sealed class MtrSession : IAsyncDisposable
         Log.AddMeta(new { type = "resolved", res.Host, address = res.Address?.ToString(), res.Via, res.Ms, res.Addresses });
         if (res.Address == null)
         {
-            var reason = res.Attempts.LastOrDefault()?.Error ?? "нет ответа";
-            Fail("resolve-failed", $"Не удалось получить IP для «{parsed.Host}»: {reason}.");
+            var reason = res.Attempts.LastOrDefault()?.Error ?? Loc.S("нет ответа", "no answer");
+            Fail("resolve-failed", Loc.S($"Не удалось получить IP для «{parsed.Host}»: {reason}.", $"Could not resolve \"{parsed.Host}\": {reason}."));
             return;
         }
         if (res.Via is "adapter-dns" or "public-dns")
-            Event("warn", "dns-fallback", $"Системный DNS не ответил, адрес получен через {res.Attempts.Last(a => a.Ok).Resolver}.");
+            Event("warn", "dns-fallback", Loc.S($"Системный DNS не ответил, адрес получен через {res.Attempts.Last(a => a.Ok).Resolver}.", $"The system DNS did not answer; the address was resolved via {res.Attempts.Last(a => a.Ok).Resolver}."));
 
         _target = res.Address;
         State.TargetIp = AdapterService.Format(_target);
@@ -212,7 +212,7 @@ public sealed class MtrSession : IAsyncDisposable
             }
             catch { }
             if (AdapterService.LookupRoute(_target, ifIndex, _source) == null)
-                Event("warn", "no-route", $"У адаптера «{chosen.Name}» нет маршрута до {State.TargetIp}. Пакеты могут не уйти; попробуйте режим «Авто».");
+                Event("warn", "no-route", Loc.S($"У адаптера «{chosen.Name}» нет маршрута до {State.TargetIp}. Пакеты могут не уйти; попробуйте режим «Авто».", $"Adapter \"{chosen.Name}\" has no route to {State.TargetIp}. Packets may not leave; try \"Auto\"."));
         }
 
         _payload = IcmpProber.BuildPayload(_opts.PacketSize, _opts.Payload);
@@ -233,7 +233,7 @@ public sealed class MtrSession : IAsyncDisposable
         State.StartedAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
         EmitState();
         Log.AddMeta(new { type = "start", State.Input, State.TargetIp, State.SourceIp, State.AdapterId, options = _opts });
-        Event("info", "start", $"Трассировка {res.Host} [{State.TargetIp}] с {State.SourceIp ?? "системного адреса"}: интервал {_opts.IntervalMs} мс, {_opts.PacketSize} байт, до {_opts.MaxHops} хопов.");
+        Event("info", "start", Loc.S($"Трассировка {res.Host} [{State.TargetIp}] с {State.SourceIp ?? "системного адреса"}: интервал {_opts.IntervalMs} мс, {_opts.PacketSize} байт, до {_opts.MaxHops} хопов.", $"Tracing {res.Host} [{State.TargetIp}] from {State.SourceIp ?? "the system address"}: interval {_opts.IntervalMs} ms, {_opts.PacketSize} bytes, up to {_opts.MaxHops} hops."));
 
         _clock.Start();
         for (var ttl = 1; ttl <= _opts.MaxHops; ttl++)
@@ -290,7 +290,7 @@ public sealed class MtrSession : IAsyncDisposable
         catch (OperationCanceledException) { }
         catch (Exception e)
         {
-            Event("error", "worker-failed", $"Ошибка потока TTL {ttl}: {e.Message}", ttl);
+            Event("error", "worker-failed", Loc.S($"Ошибка потока TTL {ttl}: {e.Message}", $"TTL {ttl} worker failed: {e.Message}"), ttl);
         }
         finally
         {
@@ -299,7 +299,7 @@ public sealed class MtrSession : IAsyncDisposable
                 State.State = "finished";
                 EmitState();
                 Publish(true);
-                Event("info", "finished", $"Завершено: {_opts.MaxRounds} раундов.");
+                Event("info", "finished", Loc.S($"Завершено: {_opts.MaxRounds} раундов.", $"Finished: {_opts.MaxRounds} rounds."));
             }
         }
     }
@@ -319,7 +319,7 @@ public sealed class MtrSession : IAsyncDisposable
         if (r.Status == ProbeStatus.PacketTooBig && !_pmtuReported)
         {
             _pmtuReported = true;
-            Event("warn", "packet-too-big", $"Хоп {ttl}: пакет {_opts.PacketSize} байт с флагом DF больше MTU канала. Уменьшите размер или снимите DF.", ttl, fromStr);
+            Event("warn", "packet-too-big", Loc.S($"Хоп {ttl}: пакет {_opts.PacketSize} байт с флагом DF больше MTU канала. Уменьшите размер или снимите DF.", $"Hop {ttl}: a {_opts.PacketSize}-byte packet with DF set is larger than the link MTU. Reduce the size or clear DF."), ttl, fromStr);
         }
 
         bool newResponder = false;
@@ -353,11 +353,11 @@ public sealed class MtrSession : IAsyncDisposable
             _onDiscovered(r.From);
             var replies = hop.Agg.Recv;
             if (hop.Responders.Count > 1 && replies > 3)
-                Event("warn", "route-change", $"Хоп {ttl}: новый узел {fromStr} (ранее {previousPrimary ?? "—"}). Возможна смена маршрута или балансировка (ECMP).", ttl, fromStr);
+                Event("warn", "route-change", Loc.S($"Хоп {ttl}: новый узел {fromStr} (ранее {previousPrimary ?? "—"}). Возможна смена маршрута или балансировка (ECMP).", $"Hop {ttl}: new router {fromStr} (was {previousPrimary ?? "—"}). The route changed or is load-balanced (ECMP)."), ttl, fromStr);
         }
         else if (previousPrimary != null && hop.Primary != previousPrimary)
         {
-            Event("info", "primary-change", $"Хоп {ttl}: основным узлом стал {hop.Primary} вместо {previousPrimary}.", ttl, hop.Primary);
+            Event("info", "primary-change", Loc.S($"Хоп {ttl}: основным узлом стал {hop.Primary} вместо {previousPrimary}.", $"Hop {ttl}: main router is now {hop.Primary} instead of {previousPrimary}."), ttl, hop.Primary);
         }
 
         if (reachedTarget)
@@ -369,7 +369,7 @@ public sealed class MtrSession : IAsyncDisposable
                 if (!_destReachedReported)
                 {
                     _destReachedReported = true;
-                    Event("info", "destination", $"Цель {State.TargetIp} достигнута за {ttl} хоп(ов).", ttl, fromStr);
+                    Event("info", "destination", Loc.S($"Цель {State.TargetIp} достигнута за {ttl} хоп(ов).", $"Target {State.TargetIp} reached in {ttl} hop(s)."), ttl, fromStr);
                     if (State.Host != null && State.Host != State.TargetIp) DestinationReached?.Invoke(_target!, State.Host, _source);
                 }
                 // A proxy tunnel (Xray, sing-box, tun2socks) answers echo requests itself: the "destination" replies
@@ -377,7 +377,7 @@ public sealed class MtrSession : IAsyncDisposable
                 if (ttl == 1 && TunnelAdapter && r.RttMs < 1.0 && !_fakeReported)
                 {
                     _fakeReported = true;
-                    Event("error", "fake-replies", $"Цель «ответила» на первом же хопе за {r.RttMs:0.00} мс: это отвечает сам VPN-туннель, а не {State.TargetIp}. Через прокси-туннель трассировка по хопам невозможна. Включите VPN-режим.", ttl, fromStr);
+                    Event("error", "fake-replies", Loc.S($"Цель «ответила» на первом же хопе за {r.RttMs:0.00} мс: это отвечает сам VPN-туннель, а не {State.TargetIp}. Через прокси-туннель трассировка по хопам невозможна. Включите VPN-режим.", $"The target \"answered\" on the very first hop in {r.RttMs:0.00} ms: that is the VPN tunnel itself, not {State.TargetIp}. Hop-by-hop tracing through a proxy tunnel is impossible. Turn on VPN mode."), ttl, fromStr);
                 }
             }
         }
@@ -385,7 +385,7 @@ public sealed class MtrSession : IAsyncDisposable
         {
             hop.UnreachableReported = true;
             if (ttl < Volatile.Read(ref _destTtl)) Interlocked.Exchange(ref _destTtl, ttl);
-            Event("error", "dest-unreachable", $"Хоп {ttl} ({fromStr}) сообщает: {StatusText(r.Status)}. Дальше маршрут не идёт.", ttl, fromStr);
+            Event("error", "dest-unreachable", Loc.S($"Хоп {ttl} ({fromStr}) сообщает: {StatusText(r.Status)}. Дальше маршрут не идёт.", $"Hop {ttl} ({fromStr}) reports: {StatusText(r.Status)}. The route ends here."), ttl, fromStr);
         }
 
         if (ttl == Volatile.Read(ref _destTtl))
@@ -400,24 +400,24 @@ public sealed class MtrSession : IAsyncDisposable
         {
             _destLossReported = true;
             _destLossSince = IcmpProber.NowUs() / 1000;
-            Event("error", "loss-burst", "Цель перестала отвечать: 3 пакета подряд потеряны.");
+            Event("error", "loss-burst", Loc.S("Цель перестала отвечать: 3 пакета подряд потеряны.", "The target stopped answering: 3 packets in a row lost."));
         }
         else if (replied && _destLossReported)
         {
             _destLossReported = false;
             var dur = IcmpProber.NowUs() / 1000 - _destLossSince;
-            Event("info", "recovered", $"Связь с целью восстановлена через {dur / 1000.0:0.0} с.");
+            Event("info", "recovered", Loc.S($"Связь с целью восстановлена через {dur / 1000.0:0.0} с.", $"The target is reachable again after {dur / 1000.0:0.0} s."));
         }
     }
 
     public static string StatusText(ProbeStatus s) => s switch
     {
-        ProbeStatus.NetUnreachable => "сеть недоступна",
-        ProbeStatus.HostUnreachable => "узел недоступен",
-        ProbeStatus.Prohibited => "доступ запрещён фильтром",
-        ProbeStatus.ProtocolUnreachable => "протокол недоступен / запрещено",
-        ProbeStatus.PortUnreachable => "порт недоступен",
-        ProbeStatus.BadRoute => "неверный маршрут",
+        ProbeStatus.NetUnreachable => Loc.S("сеть недоступна", "network unreachable"),
+        ProbeStatus.HostUnreachable => Loc.S("узел недоступен", "host unreachable"),
+        ProbeStatus.Prohibited => Loc.S("доступ запрещён фильтром", "administratively prohibited"),
+        ProbeStatus.ProtocolUnreachable => Loc.S("протокол недоступен / запрещено", "protocol unreachable / prohibited"),
+        ProbeStatus.PortUnreachable => Loc.S("порт недоступен", "port unreachable"),
+        ProbeStatus.BadRoute => Loc.S("неверный маршрут", "bad route"),
         _ => s.ToString(),
     };
 
@@ -504,9 +504,9 @@ public sealed class MtrSession : IAsyncDisposable
             _lastNotesAt = now;
             _notes = _analyzer.Analyze(hops, dest == int.MaxValue ? null : dest, tcp);
             if (State.Mode == "vpn")
-                _notes.Insert(0, new NoteDto("info", "vpn-scope", "VPN-режим: хопы и разбор относятся к участку до сервера VPN. Задержка до самой цели в строке «через туннель».", null));
+                _notes.Insert(0, new NoteDto("info", "vpn-scope", Loc.S("VPN-режим: хопы и разбор относятся к участку до сервера VPN. Задержка до самой цели в строке «через туннель».", "VPN mode: hops and analysis cover the path to the VPN server. Latency to the target itself is in the \"through the tunnel\" row."), null));
             if (_fakeReported)
-                _notes.Insert(0, new NoteDto("error", "fake-replies", "Ответы подделаны VPN-туннелем: задержки и хопы в таблице не настоящие. Для туннеля используйте VPN-режим.", 1));
+                _notes.Insert(0, new NoteDto("error", "fake-replies", Loc.S("Ответы подделаны VPN-туннелем: задержки и хопы в таблице не настоящие. Для туннеля используйте VPN-режим.", "Replies are faked by the VPN tunnel: latencies and hops in the table are not real. Use VPN mode for the tunnel."), 1));
         }
         return new HopsSnapshotDto(Id, round, dest == int.MaxValue ? null : dest, hops, tcp, _notes, _clock.ElapsedMilliseconds, SnapshotExtra?.Invoke());
     }
@@ -518,7 +518,7 @@ public sealed class MtrSession : IAsyncDisposable
         // Give ICMP a few rounds; probes at the last TTLs need the full timeout to be counted.
         if (_hops[1].Rounds < 4) return;
         _tcpTask = Task.Run(TcpLoopAsync);
-        Event("warn", "tcp-fallback", $"Цель не отвечает на ICMP. Включён TCP-пинг (порт {_opts.TcpPort}): время установки соединения.");
+        Event("warn", "tcp-fallback", Loc.S($"Цель не отвечает на ICMP. Включён TCP-пинг (порт {_opts.TcpPort}): время установки соединения.", $"The target does not answer ICMP. TCP ping is on (port {_opts.TcpPort}): connection setup time."));
     }
 
     private async Task TcpLoopAsync()
@@ -563,14 +563,14 @@ public sealed class MtrSession : IAsyncDisposable
         {
             _running.Reset();
             State.State = "paused";
-            Event("info", "paused", "Пауза.");
+            Event("info", "paused", Loc.S("Пауза.", "Paused."));
         }
         else
         {
             if (State.State == "waiting-network") return;
             _running.Set();
             State.State = "running";
-            Event("info", "resumed", "Продолжено.");
+            Event("info", "resumed", Loc.S("Продолжено.", "Resumed."));
         }
         EmitState();
     }
@@ -594,7 +594,7 @@ public sealed class MtrSession : IAsyncDisposable
                 State.State = "waiting-network";
                 State.OutageSince = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
                 EmitState();
-                Event("error", "network-down", $"Сеть недоступна: {reason}. Трассировка приостановлена и продолжится автоматически.");
+                Event("error", "network-down", Loc.S($"Сеть недоступна: {reason}. Трассировка приостановлена и продолжится автоматически.", $"Network unavailable: {reason}. Tracing is suspended and will resume automatically."));
                 _outageTimer ??= new Timer(_ => CheckNetwork(), null, 1000, 1000);
             }
             else if (ok && State.State == "waiting-network")
@@ -608,13 +608,13 @@ public sealed class MtrSession : IAsyncDisposable
                 _outageTimer = null;
                 _running.Set();
                 EmitState();
-                Event("info", "network-up", $"Сеть восстановлена через {dur:0.0} с. Источник: {State.SourceIp ?? "системный"}.");
+                Event("info", "network-up", Loc.S($"Сеть восстановлена через {dur:0.0} с. Источник: {State.SourceIp ?? "системный"}.", $"Network is back after {dur:0.0} s. Source: {State.SourceIp ?? "system"}."));
             }
             else if (ok && !Equals(newSource, _source) && _adapterId != null)
             {
                 ApplySource(newSource);
                 EmitState();
-                Event("warn", "source-changed", $"IP-адрес адаптера изменился, пакеты теперь уходят с {State.SourceIp}.");
+                Event("warn", "source-changed", Loc.S($"IP-адрес адаптера изменился, пакеты теперь уходят с {State.SourceIp}.", $"The adapter IP changed; packets now leave from {State.SourceIp}."));
             }
         }
     }
@@ -639,12 +639,12 @@ public sealed class MtrSession : IAsyncDisposable
             }
             if (!NetworkInterface.GetIsNetworkAvailable())
             {
-                reason = "нет активных подключений";
+                reason = Loc.S("нет активных подключений", "no active connections");
                 return false;
             }
             if (AdapterService.SystemSourceFor(_target!) == null)
             {
-                reason = "нет маршрута до цели";
+                reason = Loc.S("нет маршрута до цели", "no route to the target");
                 return false;
             }
             return true;
@@ -671,7 +671,7 @@ public sealed class MtrSession : IAsyncDisposable
             State.State = "stopped";
             Publish(true);
             EmitState();
-            Event("info", "stopped", "Остановлено.");
+            Event("info", "stopped", Loc.S("Остановлено.", "Stopped."));
         }
         if (_tcpTask != null)
         {

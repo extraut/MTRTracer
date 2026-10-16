@@ -83,6 +83,81 @@ export interface AppSettings {
   options: TraceOptions;
   recent: string[];
   ui: unknown;
+  language: Lang | null;
+  providers: GeoProviders;
+  geoDb: GeoDbSetting;
+  updateRepo: string;
+}
+
+export type Lang = 'ru' | 'en';
+
+export interface GeoProviders {
+  offlineDb: boolean;
+  hostnameHints: boolean;
+  ripeIpmap: boolean;
+  ripeStat: boolean;
+  ipApi: boolean;
+  cloudflareSelf: boolean;
+  cloudflareColo: boolean;
+  teamCymru: boolean;
+}
+
+export const defaultProviders: GeoProviders = {
+  offlineDb: true,
+  hostnameHints: true,
+  ripeIpmap: true,
+  ripeStat: true,
+  ipApi: true,
+  cloudflareSelf: true,
+  cloudflareColo: true,
+  teamCymru: true,
+};
+
+export interface GeoDbSetting {
+  autoUpdate: boolean;
+  active: string | null;
+  urlTemplate: string;
+}
+
+export const defaultUrlTemplate = 'https://download.db-ip.com/free/{name}-{month}.mmdb.gz';
+
+export interface GeoDbRelease {
+  id: string;
+  label: string;
+  city: boolean;
+  asn: boolean;
+  bytes: number;
+  type: string | null;
+  built: string | null;
+  active: boolean;
+}
+
+export interface GeoDbAvailability {
+  month: string;
+  available: boolean;
+  bytes: number | null;
+  installed: boolean;
+}
+
+export interface CacheStats {
+  hosts: number;
+  ripeIpmap: number;
+  ripeStatGeo: number;
+  ripeStatNet: number;
+  ipApi: number;
+}
+
+export interface UpdateInfo {
+  repo: string;
+  current: string;
+  latest: string | null;
+  newerAvailable: boolean;
+  url: string | null;
+  publishedAt: string | null;
+  notes: string | null;
+  assets: { name: string; url: string; size: number }[];
+  archived: boolean;
+  error: string | null;
 }
 
 export type TraceStateName = 'resolving' | 'running' | 'paused' | 'waiting-network' | 'stopped' | 'finished' | 'error';
@@ -436,6 +511,9 @@ export interface GeoStatus {
   error: string | null;
   online: boolean;
   onlineError: string | null;
+  active?: string | null;
+  enabled?: boolean;
+  autoUpdate?: boolean;
 }
 
 export interface SelfGeo {
@@ -480,6 +558,10 @@ export interface ConnBrief {
 
 export interface AppInfo {
   version: string;
+  language?: Lang;
+  systemLanguage?: Lang;
+  repo?: string;
+  platform?: string;
   isAdmin: boolean;
   dataDir: string;
   sessionsDir: string;
@@ -512,7 +594,20 @@ export interface EventMap {
 export interface RequestMap {
   'app.info': [undefined, AppInfo];
   'settings.get': [undefined, AppSettings];
-  'settings.set': [{ options?: TraceOptions; ui?: unknown; origin?: OriginSetting; vpnMode?: boolean; vpnServer?: string | null }, AppSettings];
+  'settings.set': [
+    {
+      options?: TraceOptions;
+      ui?: unknown;
+      origin?: OriginSetting;
+      vpnMode?: boolean;
+      vpnServer?: string | null;
+      language?: Lang | null;
+      providers?: GeoProviders;
+      geoDb?: Partial<GeoDbSetting>;
+      updateRepo?: string;
+    },
+    AppSettings,
+  ];
   'adapters.list': [undefined, { adapters: AdapterInfo[]; selectedId: string | null; chosen: boolean; vpnMode: boolean; tunnels: TunnelInfo[] }];
   'adapters.select': [{ adapterId: string | null; vpnMode?: boolean }, { adapterId: string | null; vpnMode: boolean }];
   'tunnel.detect': [{ adapterId?: string } | undefined, TunnelInfo | null];
@@ -524,7 +619,18 @@ export interface RequestMap {
   'trace.pmtu': [undefined, { mtu: number | null; ms: number }];
   'trace.dnsBench': [{ host?: string } | undefined, { host: string; results: ResolveAttempt[] }];
   'geo.status': [undefined, GeoStatus];
-  'geo.download': [undefined, null];
+  'geo.download': [{ month?: string } | undefined, null];
+  'geo.db.list': [undefined, { releases: GeoDbRelease[]; active: string | null; pinned: string | null; setting: GeoDbSetting; dir: string }];
+  'geo.db.available': [{ count?: number }, GeoDbAvailability[]];
+  'geo.db.use': [{ id: string | null }, { active: string | null }];
+  'geo.db.delete': [{ id: string }, { active: string | null }];
+  'geo.db.import': [{ path: string }, { kind: 'city' | 'asn'; active: string | null }];
+  'geo.db.fetch': [{ url: string }, { kind: 'city' | 'asn'; active: string | null }];
+  'geo.cache.stats': [undefined, CacheStats];
+  'geo.cache.clear': [undefined, CacheStats];
+  'app.checkUpdate': [undefined, UpdateInfo];
+  'shell.url': [{ url: string }, null];
+  'file.pick': [undefined, { path: string | null }];
   'geo.self': [{ force?: boolean } | undefined, OriginInfo];
   'geo.cities': [undefined, { city: string; cc: string; lat: number; lon: number }[]];
   'history.targets': [undefined, TargetSummary[]];

@@ -27,7 +27,7 @@ public static class ReportExporter
 
     private static string HostLabel(ExportContext c, HopDto h)
     {
-        if (h.Primary == null) return "Нет ответа";
+        if (h.Primary == null) return Loc.S("Нет ответа", "No reply");
         var name = c.Host(h.Primary)?.Hostname;
         return name != null ? $"{name} [{h.Primary}]" : h.Primary;
     }
@@ -36,9 +36,9 @@ public static class ReportExporter
     {
         var s = c.State;
         var started = DateTimeOffset.FromUnixTimeMilliseconds(s.StartedAt).ToLocalTime();
-        return $"MTRTracer: {s.Host} [{s.TargetIp}]  источник {s.SourceIp ?? "системный"}{(c.AdapterName != null ? $" ({c.AdapterName})" : "")}\n" +
-               $"Начало: {started:yyyy-MM-dd HH:mm:ss}, длительность {c.Snapshot.ElapsedMs / 1000.0:0} с, раундов {c.Snapshot.Round}, " +
-               $"интервал {c.Options.IntervalMs} мс, размер {c.Options.PacketSize} Б, таймаут {c.Options.TimeoutMs} мс";
+        return Loc.S($"MTRTracer: {s.Host} [{s.TargetIp}]  источник {s.SourceIp ?? "системный"}{(c.AdapterName != null ? $" ({c.AdapterName})" : "")}\n", $"MTRTracer: {s.Host} [{s.TargetIp}]  source {s.SourceIp ?? "system"}{(c.AdapterName != null ? $" ({c.AdapterName})" : "")}\n") +
+               Loc.S($"Начало: {started:yyyy-MM-dd HH:mm:ss}, длительность {c.Snapshot.ElapsedMs / 1000.0:0} с, раундов {c.Snapshot.Round}, ", $"Started: {started:yyyy-MM-dd HH:mm:ss}, duration {c.Snapshot.ElapsedMs / 1000.0:0} s, rounds {c.Snapshot.Round}, ") +
+               Loc.S($"интервал {c.Options.IntervalMs} мс, размер {c.Options.PacketSize} Б, таймаут {c.Options.TimeoutMs} мс", $"interval {c.Options.IntervalMs} ms, size {c.Options.PacketSize} B, timeout {c.Options.TimeoutMs} ms");
     }
 
     public static string ToText(ExportContext c)
@@ -48,7 +48,7 @@ public static class ReportExporter
         var sb = new StringBuilder();
         sb.AppendLine(Header(c));
         sb.AppendLine();
-        var head = $"{"#",3}  {"Узел".PadRight(hostWidth)}  {"Loss%",6} {"Sent",5} {"Recv",5} {"Best",7} {"Avg",7} {"Worst",7} {"Last",7} {"StDev",7} {"Jttr",6}";
+        var head = $"{"#",3}  {Loc.S("Узел".PadRight(hostWidth), "Host".PadRight(hostWidth))}  {"Loss%",6} {"Sent",5} {"Recv",5} {"Best",7} {"Avg",7} {"Worst",7} {"Last",7} {"StDev",7} {"Jttr",6}";
         sb.AppendLine(head);
         sb.AppendLine(new string('-', head.Length));
         foreach (var h in rows)
@@ -61,7 +61,7 @@ public static class ReportExporter
             sb.AppendLine($"\nTCP :{t.Port}  loss {t.Loss:0.0}%  sent {t.Sent}  recv {t.Recv}  best {F(t.Best)}  avg {F(t.Avg)}  worst {F(t.Worst)}");
         if (c.Snapshot.Notes.Count > 0)
         {
-            sb.AppendLine("\nВыводы:");
+            sb.AppendLine(Loc.S("\nВыводы:", "\nFindings:"));
             foreach (var n in c.Snapshot.Notes) sb.AppendLine($"  • {n.Text}");
         }
         return sb.ToString();
@@ -125,14 +125,14 @@ public static class ReportExporter
             .Append("</style></head><body>");
         sb.Append("<h1>").Append(E(c.State.Host)).Append(" <span class=\"ip\">").Append(E(c.State.TargetIp)).Append("</span></h1>");
         sb.Append("<p class=\"m\">").Append(E(Header(c))).Append("</p>");
-        sb.Append("<table><thead><tr><th>#</th><th class=\"l\">Узел</th><th class=\"l\">AS / место</th><th>Loss%</th><th>Sent</th><th>Recv</th><th>Best</th><th>Avg</th><th>Worst</th><th>Last</th><th>StDev</th><th>Jitter</th></tr></thead><tbody>");
+        sb.Append(Loc.S("<table><thead><tr><th>#</th><th class=\"l\">Узел</th><th class=\"l\">AS / место</th><th>Loss%</th><th>Sent</th><th>Recv</th><th>Best</th><th>Avg</th><th>Worst</th><th>Last</th><th>StDev</th><th>Jitter</th></tr></thead><tbody>", "<table><thead><tr><th>#</th><th class=\"l\">Host</th><th class=\"l\">AS / location</th><th>Loss%</th><th>Sent</th><th>Recv</th><th>Best</th><th>Avg</th><th>Worst</th><th>Last</th><th>StDev</th><th>Jitter</th></tr></thead><tbody>"));
         foreach (var h in c.Snapshot.Hops)
         {
             var info = h.Primary == null ? null : c.Host(h.Primary);
             var geo = c.Geo?.Hops.FirstOrDefault(x => x.Ttl == h.Ttl && x.Lat != null);
             var lossCls = h.Loss >= 5 ? "bad" : h.Loss > 0 ? "warn" : "";
             sb.Append("<tr><td>").Append(h.Ttl).Append("</td><td class=\"l\">")
-                .Append(h.Primary == null ? "<span class=\"ip\">нет ответа</span>" : $"{E(info?.Hostname ?? h.Primary)}<br><span class=\"ip\">{E(h.Primary)}</span>")
+                .Append(h.Primary == null ? Loc.S("<span class=\"ip\">нет ответа</span>", "<span class=\"ip\">no reply</span>") : $"{E(info?.Hostname ?? h.Primary)}<br><span class=\"ip\">{E(h.Primary)}</span>")
                 .Append("</td><td class=\"l\">").Append(E(info?.Asn != null ? $"AS{info.Asn} {info.AsName}" : ""))
                 .Append("<br><span class=\"ip\">").Append(E(string.Join(", ", new[] { geo?.City, geo?.CountryCode }.Where(x => !string.IsNullOrEmpty(x))))).Append("</span></td>")
                 .Append($"<td class=\"{lossCls}\">{h.Loss.ToString("0.0", Inv)}</td><td>{h.Sent}</td><td>{h.Recv}</td>")
@@ -141,19 +141,19 @@ public static class ReportExporter
         sb.Append("</tbody></table>");
         if (c.Snapshot.Notes.Count > 0)
         {
-            sb.Append("<h2 style=\"font-size:15px;margin-top:28px\">Выводы</h2><ul>");
+            sb.Append(Loc.S("<h2 style=\"font-size:15px;margin-top:28px\">Выводы</h2><ul>", "<h2 style=\"font-size:15px;margin-top:28px\">Findings</h2><ul>"));
             foreach (var n in c.Snapshot.Notes)
                 sb.Append("<li class=\"").Append(n.Level switch { "error" => "bad", "warn" => "warn", "ok" => "ok", _ => "" }).Append("\">").Append(E(n.Text)).Append("</li>");
             sb.Append("</ul>");
         }
         if (c.Events.Count > 0)
         {
-            sb.Append("<h2 style=\"font-size:15px;margin-top:28px\">События</h2><table><tbody>");
+            sb.Append(Loc.S("<h2 style=\"font-size:15px;margin-top:28px\">События</h2><table><tbody>", "<h2 style=\"font-size:15px;margin-top:28px\">Events</h2><table><tbody>"));
             foreach (var e in c.Events.TakeLast(200))
                 sb.Append("<tr><td class=\"l ip\">").Append(DateTimeOffset.FromUnixTimeMilliseconds(e.T).ToLocalTime().ToString("HH:mm:ss")).Append("</td><td class=\"l\">").Append(E(e.Message)).Append("</td></tr>");
             sb.Append("</tbody></table>");
         }
-        sb.Append("<p class=\"m\" style=\"margin-top:28px\">IP Geolocation by DB-IP (db-ip.com), ip-api.com. Отчёт создан MTRTracer.</p></body></html>");
+        sb.Append(Loc.S("<p class=\"m\" style=\"margin-top:28px\">IP Geolocation by DB-IP (db-ip.com), ip-api.com. Отчёт создан MTRTracer.</p></body></html>", "<p class=\"m\" style=\"margin-top:28px\">IP Geolocation by DB-IP (db-ip.com), ip-api.com. Report created by MTRTracer.</p></body></html>"));
         return sb.ToString();
     }
 }

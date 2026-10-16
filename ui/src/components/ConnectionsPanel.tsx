@@ -1,3 +1,4 @@
+import { L } from '../i18n';
 import { useEffect, useMemo, useState } from 'react';
 import { request } from '../bridge/client';
 import type { Connection } from '../bridge/protocol';
@@ -46,21 +47,21 @@ export function ConnectionsPanel() {
     const traceable = !!remote && c.remoteKind === 'public';
     const copy = (text: string) => {
       void request('clipboard.copy', { text });
-      notify(`Скопировано: ${text}`);
+      notify(`${L('Скопировано', 'Copied')}: ${text}`);
     };
     openMenu(e, [
-      { title: `${c.process} (PID ${c.pid}) → ${c.remoteHost ?? ep ?? 'нет удалённого адреса'}` },
-      { label: 'Трассировать до узла', icon: <Play size={11} />, hint: remote ?? undefined, disabled: !traceable, onSelect: () => { void setVpnMode(false).then(() => start(remote!)); } },
+      { title: `${c.process} (PID ${c.pid}) → ${c.remoteHost ?? ep ?? L('нет удалённого адреса', 'no remote address')}` },
+      { label: L('Трассировать до узла', 'Trace to this host'), icon: <Play size={11} />, hint: remote ?? undefined, disabled: !traceable, onSelect: () => { void setVpnMode(false).then(() => start(remote!)); } },
       ...(tunnels.length > 0
-        ? [{ label: 'Трассировать через VPN', icon: <Play size={11} />, hint: 'VPN-режим', disabled: !traceable, onSelect: () => { void setVpnMode(true).then(() => start(c.remoteHost ?? remote!)); } }]
+        ? [{ label: L('Трассировать через VPN', 'Trace through the VPN'), icon: <Play size={11} />, hint: L('VPN-режим', 'VPN mode'), disabled: !traceable, onSelect: () => { void setVpnMode(true).then(() => start(c.remoteHost ?? remote!)); } }]
         : []),
       { separator: true as const },
-      { label: 'Копировать IP', icon: <Copy size={13} />, disabled: !remote, onSelect: () => copy(remote!) },
-      { label: 'Копировать IP:порт', icon: <Copy size={13} />, disabled: !ep, onSelect: () => copy(ep!) },
-      { label: 'Копировать имя хоста', icon: <Copy size={13} />, disabled: !c.remoteHost, onSelect: () => copy(c.remoteHost!) },
+      { label: L('Копировать IP', 'Copy IP'), icon: <Copy size={13} />, disabled: !remote, onSelect: () => copy(remote!) },
+      { label: L('Копировать IP:порт', 'Copy IP:port'), icon: <Copy size={13} />, disabled: !ep, onSelect: () => copy(ep!) },
+      { label: L('Копировать имя хоста', 'Copy host name'), icon: <Copy size={13} />, disabled: !c.remoteHost, onSelect: () => copy(c.remoteHost!) },
       { separator: true as const },
-      { label: `Показать только ${c.process}`, icon: <Search size={13} />, onSelect: () => setQuery(c.process) },
-      { label: 'Открыть папку процесса', icon: <Folder size={13} />, disabled: !c.path, onSelect: () => void request('shell.reveal', { path: c.path! }).catch((err: Error) => notify(err.message, 'error')) },
+      { label: `${L('Показать только', 'Show only')} ${c.process}`, icon: <Search size={13} />, onSelect: () => setQuery(c.process) },
+      { label: L('Открыть папку процесса', 'Open process folder'), icon: <Folder size={13} />, disabled: !c.path, onSelect: () => void request('shell.reveal', { path: c.path! }).catch((err: Error) => notify(err.message, 'error')) },
     ]);
   };
 
@@ -102,21 +103,21 @@ export function ConnectionsPanel() {
       <div className="panel-tools">
         <div className="seg">
           <button className={view === 'table' ? 'on' : ''} onClick={() => setView('table')}>
-            Сейчас
+            {L('Сейчас', 'Now')}
           </button>
           <button className={view === 'log' ? 'on' : ''} onClick={() => setView('log')}>
-            Журнал {log.length > 0 && <span className="muted num">{log.length}</span>}
+            {L('Журнал', 'Log')} {log.length > 0 && <span className="muted num">{log.length}</span>}
           </button>
         </div>
         <label className="search">
           <Search size={13} />
-          <input className="field sm" placeholder="Процесс, PID, адрес, порт" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className="field sm" placeholder={L('Процесс, PID, адрес, порт', 'Process, PID, address, port')} value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <button className={`btn sm ${externalOnly ? 'active' : ''}`} onClick={() => setExternalOnly(!externalOnly)} title="Скрыть LISTEN, UDP без адресата и локальную сеть">
-          Только интернет
+        <button className={`btn sm ${externalOnly ? 'active' : ''}`} onClick={() => setExternalOnly(!externalOnly)} title={L('Скрыть LISTEN, UDP без адресата и локальную сеть', 'Hide LISTEN, unconnected UDP and the local network')}>
+          {L('Только интернет', 'Internet only')}
         </button>
         <span className="panel-count num">
-          {rows.length} соединений · {procCount} процессов
+          {rows.length} {L('соединений', 'connections')} · {procCount} {L('процессов', 'processes')}
         </span>
       </div>
       {view === 'table' ? (
@@ -125,20 +126,20 @@ export function ConnectionsPanel() {
             <thead>
               <tr>
                 <th onClick={() => setSort('process')} className={sort === 'process' ? 'on' : ''}>
-                  Процесс
+                  {L('Процесс', 'Process')}
                 </th>
-                <th>Прот.</th>
-                <th>Локальный</th>
+                <th>{L('Прот.', 'Proto')}</th>
+                <th>{L('Локальный', 'Local')}</th>
                 <th onClick={() => setSort('remote')} className={sort === 'remote' ? 'on' : ''}>
-                  Удалённый
+                  {L('Удалённый', 'Remote')}
                 </th>
-                <th>Где</th>
+                <th>{L('Где', 'Where')}</th>
                 <th onClick={() => setSort('state')} className={sort === 'state' ? 'on' : ''}>
-                  Состояние
+                  {L('Состояние', 'State')}
                 </th>
-                <th>Интерфейс</th>
+                <th>{L('Интерфейс', 'Interface')}</th>
                 <th onClick={() => setSort('age')} className={`r ${sort === 'age' ? 'on' : ''}`}>
-                  Открыто
+                  {L('Открыто', 'Opened')}
                 </th>
                 <th />
               </tr>
@@ -147,7 +148,7 @@ export function ConnectionsPanel() {
               {rows.length === 0 && (
                 <tr>
                   <td colSpan={9} className="empty">
-                    {items.length === 0 ? 'Читаем таблицы TCP/UDP системы…' : 'Нет соединений под фильтр.'}
+                    {items.length === 0 ? L('Читаем таблицы TCP/UDP системы…', 'Reading the system TCP/UDP tables…') : L('Нет соединений под фильтр.', 'No connections match the filter.')}
                   </td>
                 </tr>
               )}
@@ -184,7 +185,7 @@ export function ConnectionsPanel() {
                   <td className="r num muted">{duration(now - c.firstSeen)}</td>
                   <td className="r">
                     {c.remoteAddr && c.remoteKind === 'public' && (
-                      <button className="btn sm ghost icon" onClick={() => start(c.remoteAddr!)} title={`Трассировать до ${c.remoteAddr}`}>
+                      <button className="btn sm ghost icon" onClick={() => start(c.remoteAddr!)} title={`${L('Трассировать до', 'Trace to')} ${c.remoteAddr}`}>
                         <Play size={11} />
                       </button>
                     )}
@@ -196,11 +197,11 @@ export function ConnectionsPanel() {
         </div>
       ) : (
         <div className="conn-log">
-          {log.length === 0 && <div className="empty">Здесь появятся открытия и закрытия соединений, пока открыта эта вкладка.</div>}
+          {log.length === 0 && <div className="empty">{L('Здесь появятся открытия и закрытия соединений, пока открыта эта вкладка.', 'Connections opening and closing appear here while this tab is open.')}</div>}
           {[...log].reverse().map((e, i) => (
             <div key={i} className={`cl-row ${e.kind}`}>
               <span className="mono muted">{clock(e.t, false)}</span>
-              <span className="cl-kind">{e.kind === 'open' ? '+ открыто' : '− закрыто'}</span>
+              <span className="cl-kind">{e.kind === 'open' ? L('+ открыто', '+ opened') : L('− закрыто', '− closed')}</span>
               <span>{e.c.process}</span>
               <span className="muted num">{e.c.pid}</span>
               <span className="mono">

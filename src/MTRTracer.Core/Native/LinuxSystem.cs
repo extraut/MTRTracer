@@ -221,7 +221,7 @@ public static class LinuxSystem
 
     public static (string Name, string? Path) ProcessInfo(int pid)
     {
-        if (pid <= 0) return ("другой пользователь", null);
+        if (pid <= 0) return (Loc.S("другой пользователь", "another user"), null);
         string name = $"PID {pid}";
         string? path = null;
         try { name = File.ReadAllText($"/proc/{pid}/comm").Trim(); } catch { }

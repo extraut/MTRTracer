@@ -1,3 +1,4 @@
+import { palette } from '../theme';
 import { useEffect, useRef } from 'react';
 import { latencyColorHex } from '../lib/format';
 
@@ -21,12 +22,12 @@ export function Sparkline({ values, width, height, slots = 60, scaleMax }: { val
     const gap = 1;
     const bw = (width - (slots - 1) * gap) / slots;
     const offset = slots - data.length;
-    ctx.fillStyle = 'rgba(120,124,140,0.10)';
+    ctx.fillStyle = palette.grid;
     ctx.fillRect(0, height - 1, width, 1);
     data.forEach((v, i) => {
       const x = (offset + i) * (bw + gap);
       if (v == null) {
-        ctx.fillStyle = 'rgba(236,93,85,0.55)';
+        ctx.fillStyle = `rgba(${palette.lostRgb},0.55)`;
         ctx.fillRect(x, 0, bw, height);
         return;
       }

@@ -58,7 +58,7 @@ public static class GeoSources
     {
         RipeIpmap => "RIPE IPmap",
         CloudflareColo => "Cloudflare colo",
-        Hint => "имя роутера",
+        Hint => Loc.S("имя роутера", "router name"),
         MaxMind => "MaxMind GeoLite (RIPEstat)",
         DbIp => "DB-IP Lite",
         IpApi => "ip-api.com",

@@ -1,3 +1,4 @@
+using MTRTracer.Core;
 using System.Buffers.Binary;
 using System.Diagnostics;
 using System.Net;
@@ -18,9 +19,11 @@ namespace MTRTracer.Core.Probing;
 [SupportedOSPlatform("linux")]
 public sealed unsafe class LinuxIcmpProber : IIcmpProber
 {
-    public const string PermissionHelp =
+    public static string PermissionHelp => Loc.S(
         "Нет прав на ICMP. Разрешите непривилегированный ping: sudo sysctl -w net.ipv4.ping_group_range=\"0 2147483647\" " +
-        "(и net.ipv6 аналогично), либо дайте программе право на raw-сокеты: sudo setcap cap_net_raw+ep ./MTRTracer";
+        "(и net.ipv6 аналогично), либо дайте программе право на raw-сокеты: sudo setcap cap_net_raw+ep ./MTRTracer",
+        "No permission for ICMP. Allow unprivileged ping: sudo sysctl -w net.ipv4.ping_group_range=\"0 2147483647\" " +
+        "(and the same for net.ipv6), or give the program raw-socket rights: sudo setcap cap_net_raw+ep ./MTRTracer");
 
     private const int SOL_IP = 0, IP_TTL = 2, IP_MTU_DISCOVER = 10, IP_RECVERR = 11, IP_PMTUDISC_DONT = 0, IP_PMTUDISC_DO = 2;
     private const int SOL_IPV6 = 41, IPV6_UNICAST_HOPS = 16, IPV6_MTU_DISCOVER = 23, IPV6_RECVERR = 25;

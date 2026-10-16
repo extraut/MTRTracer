@@ -453,7 +453,7 @@
 .src-row.no .src-place {
   color: var(--text-3);
   text-decoration: line-through;
-  text-decoration-color: oklch(0.67 0.19 27 / 0.6);
+  text-decoration-color: color-mix(in oklab, var(--bad) 60%, transparent);
 }
 .src-name {
   color: var(--text-2);

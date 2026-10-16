@@ -6,6 +6,13 @@ using MTRTracer.Core.Protocol;
 
 namespace MTRTracer.Tests;
 
+internal static class TestSetup
+{
+    /// <summary>Expected texts in the tests are Russian; CI runners have an English culture.</summary>
+    [System.Runtime.CompilerServices.ModuleInitializer]
+    internal static void Init() => MTRTracer.Core.Loc.Language = "ru";
+}
+
 public class LatencyStatsTests
 {
     [Fact]

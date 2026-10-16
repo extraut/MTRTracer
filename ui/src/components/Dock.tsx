@@ -1,3 +1,4 @@
+import { L } from '../i18n';
 import { lazy, Suspense } from 'react';
 import { motion } from 'motion/react';
 import { useStore, type DockTab } from '../store';
@@ -17,11 +18,11 @@ export function Dock() {
   const conns = useStore((s) => s.connections.length);
 
   const tabs: [DockTab, string, React.ReactNode?][] = [
-    ['probes', 'Пакеты'],
-    ['events', 'События', warnCount > 0 ? <span className="tab-badge">{warnCount}</span> : events.length > 0 ? <span className="tab-count">{events.length}</span> : null],
-    ['chart', 'Задержка во времени'],
-    ['connections', 'Соединения процессов', conns > 0 && tab === 'connections' ? <span className="tab-count">{conns}</span> : null],
-    ['details', 'Сведения'],
+    ['probes', L('Пакеты', 'Packets')],
+    ['events', L('События', 'Events'), warnCount > 0 ? <span className="tab-badge">{warnCount}</span> : events.length > 0 ? <span className="tab-count">{events.length}</span> : null],
+    ['chart', L('Задержка во времени', 'Latency over time')],
+    ['connections', L('Соединения процессов', 'Process connections'), conns > 0 && tab === 'connections' ? <span className="tab-count">{conns}</span> : null],
+    ['details', L('Сведения', 'Details')],
   ];
 
   return (
@@ -36,7 +37,7 @@ export function Dock() {
         ))}
       </nav>
       <div className="dock-body" role="tabpanel">
-        <Suspense fallback={<div className="empty">Загрузка…</div>}>
+        <Suspense fallback={<div className="empty">{L('Загрузка…', 'Loading…')}</div>}>
           {tab === 'probes' && <ProbeLog />}
           {tab === 'events' && <EventsPanel />}
           {tab === 'chart' && <LatencyChart />}

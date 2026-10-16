@@ -1,3 +1,4 @@
+import { L, locale } from '../i18n';
 /** Milliseconds with precision that matches magnitude: 0.94, 4.21, 32.4, 145. */
 export function ms(v: number | null | undefined): string {
   if (v == null || Number.isNaN(v)) return '—';
@@ -28,11 +29,12 @@ export const latencyVar = (v: number | null | undefined) => {
   return l < 0 ? 'var(--text-4)' : `var(--lat-${l})`;
 };
 
-/** sRGB equivalents of the latency scale for canvas/WebGL consumers that do not parse oklch. */
+/** sRGB equivalents of the latency scale for canvas/WebGL consumers that do not parse oklch (updated per theme). */
+export const latencyMuted = { value: '#5b5e6b' };
 export const latencyHex = ['#57d29a', '#b4d860', '#ecbf4f', '#ee8c4b', '#ec5d55'];
 export const latencyColorHex = (v: number | null | undefined) => {
   const l = latencyLevel(v);
-  return l < 0 ? '#5b5e6b' : latencyHex[l];
+  return l < 0 ? latencyMuted.value : latencyHex[l];
 };
 
 export function lossLevel(loss: number): 'ok' | 'warn' | 'bad' {
@@ -42,24 +44,24 @@ export function lossLevel(loss: number): 'ok' | 'warn' | 'bad' {
 }
 
 export function bits(bps: number): string {
-  if (bps < 1000) return `${Math.round(bps)} бит/с`;
-  if (bps < 1e6) return `${(bps / 1e3).toFixed(bps < 1e4 ? 1 : 0)} Кбит/с`;
-  if (bps < 1e9) return `${(bps / 1e6).toFixed(bps < 1e7 ? 1 : 0)} Мбит/с`;
-  return `${(bps / 1e9).toFixed(1)} Гбит/с`;
+  if (bps < 1000) return `${Math.round(bps)} ${L('бит/с', 'bit/s')}`;
+  if (bps < 1e6) return `${(bps / 1e3).toFixed(bps < 1e4 ? 1 : 0)} ${L('Кбит/с', 'kbit/s')}`;
+  if (bps < 1e9) return `${(bps / 1e6).toFixed(bps < 1e7 ? 1 : 0)} ${L('Мбит/с', 'Mbit/s')}`;
+  return `${(bps / 1e9).toFixed(1)} ${L('Гбит/с', 'Gbit/s')}`;
 }
 
 export function linkSpeed(bps: number): string | null {
   if (!bps || bps <= 0) return null;
-  if (bps >= 1e9) return `${+(bps / 1e9).toFixed(1)} Гбит/с`;
-  if (bps >= 1e6) return `${Math.round(bps / 1e6)} Мбит/с`;
-  return `${Math.round(bps / 1e3)} Кбит/с`;
+  if (bps >= 1e9) return `${+(bps / 1e9).toFixed(1)} ${L('Гбит/с', 'Gbit/s')}`;
+  if (bps >= 1e6) return `${Math.round(bps / 1e6)} ${L('Мбит/с', 'Mbit/s')}`;
+  return `${Math.round(bps / 1e3)} ${L('Кбит/с', 'kbit/s')}`;
 }
 
 export function bytes(n: number): string {
-  if (n < 1024) return `${n} Б`;
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} КБ`;
-  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} МБ`;
-  return `${(n / 1024 ** 3).toFixed(2)} ГБ`;
+  if (n < 1024) return `${n} ${L('Б', 'B')}`;
+  if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} ${L('КБ', 'KB')}`;
+  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} ${L('МБ', 'MB')}`;
+  return `${(n / 1024 ** 3).toFixed(2)} ${L('ГБ', 'GB')}`;
 }
 
 export function duration(msTotal: number): string {
@@ -74,13 +76,13 @@ export function duration(msTotal: number): string {
 
 export function clock(t: number, withMs = true): string {
   const d = new Date(t);
-  const base = d.toLocaleTimeString('ru-RU', { hour12: false });
+  const base = d.toLocaleTimeString(locale(), { hour12: false });
   return withMs ? `${base}.${String(d.getMilliseconds()).padStart(3, '0')}` : base;
 }
 
 export function km(v: number): string {
-  if (v < 10) return `${v.toFixed(1)} км`;
-  return `${Math.round(v).toLocaleString('ru-RU')} км`;
+  if (v < 10) return `${v.toFixed(1)} ${L('км', 'km')}`;
+  return `${Math.round(v).toLocaleString(locale())} ${L('км', 'km')}`;
 }
 
 export function plural(n: number, one: string, few: string, many: string): string {
@@ -91,40 +93,49 @@ export function plural(n: number, one: string, few: string, many: string): strin
   return many;
 }
 
-const regionNames = (() => {
-  try {
-    return new Intl.DisplayNames(['ru'], { type: 'region' });
-  } catch {
-    return null;
+const regionNamesCache = new Map<string, Intl.DisplayNames | null>();
+const regionNames = () => {
+  const l = locale();
+  if (!regionNamesCache.has(l)) {
+    try {
+      regionNamesCache.set(l, new Intl.DisplayNames([l], { type: 'region' }));
+    } catch {
+      regionNamesCache.set(l, null);
+    }
   }
-})();
+  return regionNamesCache.get(l)!;
+};
 
 export function countryName(cc: string | null | undefined): string | null {
   if (!cc) return null;
   try {
-    return regionNames?.of(cc.toUpperCase()) ?? cc;
+    return regionNames()?.of(cc.toUpperCase()) ?? cc;
   } catch {
     return cc;
   }
 }
 
-export const statusText: Record<string, string> = {
-  ok: 'ответ цели',
-  'ttl-expired': 'TTL истёк',
-  timeout: 'таймаут',
-  'net-unreachable': 'сеть недоступна',
-  'host-unreachable': 'узел недоступен',
-  'proto-unreachable': 'протокол недоступен',
-  'port-unreachable': 'порт недоступен',
-  prohibited: 'запрещено фильтром',
-  'packet-too-big': 'пакет больше MTU',
-  'param-problem': 'ошибка параметров',
-  'source-quench': 'source quench',
-  'bad-route': 'неверный маршрут',
-  'no-resources': 'нет ресурсов',
-  error: 'ошибка',
-  pending: 'ожидание',
-  'tcp-open': 'TCP: порт открыт',
-  'tcp-refused': 'TCP: отказ (RST)',
-  'tcp-timeout': 'TCP: таймаут',
-};
+/** Read through a proxy so the current language is used at every access. */
+export const statusText: Record<string, string> = new Proxy({} as Record<string, string>, {
+  get: (_t, key: string | symbol) =>
+    (({
+      ok: L('ответ цели', 'target reply'),
+      'ttl-expired': L('TTL истёк', 'TTL expired'),
+      timeout: L('таймаут', 'timeout'),
+      'net-unreachable': L('сеть недоступна', 'network unreachable'),
+      'host-unreachable': L('узел недоступен', 'host unreachable'),
+      'proto-unreachable': L('протокол недоступен', 'protocol unreachable'),
+      'port-unreachable': L('порт недоступен', 'port unreachable'),
+      prohibited: L('запрещено фильтром', 'prohibited by filter'),
+      'packet-too-big': L('пакет больше MTU', 'packet larger than MTU'),
+      'param-problem': L('ошибка параметров', 'parameter problem'),
+      'source-quench': 'source quench',
+      'bad-route': L('неверный маршрут', 'bad route'),
+      'no-resources': L('нет ресурсов', 'no resources'),
+      error: L('ошибка', 'error'),
+      pending: L('ожидание', 'pending'),
+      'tcp-open': L('TCP: порт открыт', 'TCP: port open'),
+      'tcp-refused': L('TCP: отказ (RST)', 'TCP: refused (RST)'),
+      'tcp-timeout': L('TCP: таймаут', 'TCP: timeout'),
+    }) as Record<string, string>)[key as string],
+});

@@ -8,7 +8,7 @@
     <UseWPF>true</UseWPF>
     <AssemblyName>MTRTracer</AssemblyName>
     <RootNamespace>MTRTracer.App</RootNamespace>
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Product>MTRTracer</Product>
     <Description>Network route diagnostics (MTR) with a live map</Description>
     <ApplicationManifest>app.manifest</ApplicationManifest>

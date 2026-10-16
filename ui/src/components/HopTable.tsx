@@ -1,3 +1,4 @@
+import { L, locale } from '../i18n';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { request } from '../bridge/client';
@@ -18,24 +19,24 @@ interface ColDef {
   align: 'left' | 'right';
 }
 
-const COLS: Record<Column, ColDef> = {
-  host: { id: 'host', label: 'Узел', title: 'Имя и IP ответившего роутера', width: 'minmax(220px, 1.6fr)', align: 'left' },
-  asn: { id: 'asn', label: 'Сеть · место', title: 'Автономная система и геолокация', width: 'minmax(150px, 1fr)', align: 'left' },
-  loss: { id: 'loss', label: 'Loss%', title: 'Процент потерянных пакетов', width: 62, align: 'right' },
-  sent: { id: 'sent', label: 'Sent', title: 'Отправлено пакетов', width: 54, align: 'right' },
-  recv: { id: 'recv', label: 'Recv', title: 'Получено ответов', width: 54, align: 'right' },
-  last: { id: 'last', label: 'Last', title: 'Последний RTT, мс', width: 62, align: 'right' },
-  avg: { id: 'avg', label: 'Avg', title: 'Средний RTT, мс', width: 66, align: 'right' },
-  best: { id: 'best', label: 'Best', title: 'Минимальный RTT, мс', width: 62, align: 'right' },
-  worst: { id: 'worst', label: 'Worst', title: 'Максимальный RTT, мс', width: 62, align: 'right' },
-  stdev: { id: 'stdev', label: 'StDev', title: 'Стандартное отклонение RTT, мс', width: 62, align: 'right' },
-  gmean: { id: 'gmean', label: 'Gmean', title: 'Среднее геометрическое RTT, мс', width: 62, align: 'right' },
-  jitter: { id: 'jitter', label: 'Jttr', title: 'Текущий джиттер |RTTn − RTTn−1|, мс', width: 58, align: 'right' },
-  javg: { id: 'javg', label: 'Javg', title: 'Средний джиттер, мс', width: 58, align: 'right' },
-  jmax: { id: 'jmax', label: 'Jmax', title: 'Максимальный джиттер, мс', width: 58, align: 'right' },
-  jint: { id: 'jint', label: 'Jint', title: 'Межпакетный джиттер по RFC 3550, мс', width: 58, align: 'right' },
-  history: { id: 'history', label: 'Последние 60', title: 'История RTT; красное: потеря', width: 136, align: 'left' },
-};
+const COLS = (): Record<Column, ColDef> => ({
+  host: { id: 'host', label: L('Узел', 'Host'), title: L('Имя и IP ответившего роутера', 'Name and IP of the router that answered'), width: 'minmax(220px, 1.6fr)', align: 'left' },
+  asn: { id: 'asn', label: L('Сеть · место', 'Network · location'), title: L('Автономная система и геолокация', 'Autonomous system and geolocation'), width: 'minmax(150px, 1fr)', align: 'left' },
+  loss: { id: 'loss', label: 'Loss%', title: L('Процент потерянных пакетов', 'Share of lost packets'), width: 62, align: 'right' },
+  sent: { id: 'sent', label: 'Sent', title: L('Отправлено пакетов', 'Packets sent'), width: 54, align: 'right' },
+  recv: { id: 'recv', label: 'Recv', title: L('Получено ответов', 'Replies received'), width: 54, align: 'right' },
+  last: { id: 'last', label: 'Last', title: L('Последний RTT, мс', 'Last RTT, ms'), width: 62, align: 'right' },
+  avg: { id: 'avg', label: 'Avg', title: L('Средний RTT, мс', 'Average RTT, ms'), width: 66, align: 'right' },
+  best: { id: 'best', label: 'Best', title: L('Минимальный RTT, мс', 'Minimum RTT, ms'), width: 62, align: 'right' },
+  worst: { id: 'worst', label: 'Worst', title: L('Максимальный RTT, мс', 'Maximum RTT, ms'), width: 62, align: 'right' },
+  stdev: { id: 'stdev', label: 'StDev', title: L('Стандартное отклонение RTT, мс', 'Standard deviation of RTT, ms'), width: 62, align: 'right' },
+  gmean: { id: 'gmean', label: 'Gmean', title: L('Среднее геометрическое RTT, мс', 'Geometric mean of RTT, ms'), width: 62, align: 'right' },
+  jitter: { id: 'jitter', label: 'Jttr', title: L('Текущий джиттер |RTTn − RTTn−1|, мс', 'Current jitter |RTTn − RTTn−1|, ms'), width: 58, align: 'right' },
+  javg: { id: 'javg', label: 'Javg', title: L('Средний джиттер, мс', 'Average jitter, ms'), width: 58, align: 'right' },
+  jmax: { id: 'jmax', label: 'Jmax', title: L('Максимальный джиттер, мс', 'Maximum jitter, ms'), width: 58, align: 'right' },
+  jint: { id: 'jint', label: 'Jint', title: L('Межпакетный джиттер по RFC 3550, мс', 'Interarrival jitter per RFC 3550, ms'), width: 58, align: 'right' },
+  history: { id: 'history', label: L('Последние 60', 'Last 60'), title: L('История RTT; красное: потеря', 'RTT history; red: loss'), width: 136, align: 'left' },
+});
 
 export function HopTable() {
   const hops = useStore((s) => s.hops);
@@ -43,7 +44,7 @@ export function HopTable() {
   const columns = useStore((s) => s.ui.columns);
   const tcp = useStore((s) => s.tcp);
   const vpn = useStore((s) => s.vpn);
-  const cols = useMemo(() => allColumns.filter((c) => columns.includes(c)).map((c) => COLS[c]), [columns]);
+  const cols = useMemo(() => allColumns.filter((c) => columns.includes(c)).map((c) => COLS()[c]), [columns]);
   const template = useMemo(() => ['34px', ...cols.map((c) => (typeof c.width === 'number' ? `${c.width}px` : c.width))].join(' '), [cols]);
   const minWidth = useMemo(
     () => 64 + cols.reduce((s, c) => s + (typeof c.width === 'number' ? c.width : Number(/minmax\((\d+)px/.exec(c.width)?.[1] ?? 120)), 0),
@@ -71,7 +72,7 @@ export function HopTable() {
     <div className="hops" ref={scroller} style={{ ['--cols' as string]: template }}>
       <div className="hops-inner" style={{ minWidth }}>
       <div className="hops-head" role="row">
-        <div className="hc right" title="Номер хопа (TTL)">#</div>
+        <div className="hc right" title={L('Номер хопа (TTL)', 'Hop number (TTL)')}>#</div>
         {cols.map((c) => (
           <div key={c.id} className={`hc ${c.align}`} title={c.title}>
             {c.label}
@@ -79,7 +80,7 @@ export function HopTable() {
         ))}
         <ColumnPicker />
       </div>
-      <div className="hops-body" role="table" aria-label="Хопы маршрута">
+      <div className="hops-body" role="table" aria-label={L('Хопы маршрута', 'Route hops')}>
         {empty ? (
           <EmptyState />
         ) : hops.length === 0 ? (
@@ -88,9 +89,9 @@ export function HopTable() {
           <>
             {vpn && (
               <div className="seg-row">
-                <span className="seg-tag">Через {vpn.carrier ?? 'физический адаптер'}</span>
+                <span className="seg-tag">{L('Через', 'Via')} {vpn.carrier ?? L('физический адаптер', 'physical adapter')}</span>
                 <span>
-                  настоящие хопы до сервера VPN <span className="mono">{vpn.server}</span>
+                  {L('настоящие хопы до сервера VPN', 'real hops to the VPN server')} <span className="mono">{vpn.server}</span>
                   {vpn.process ? ` (${vpn.process})` : ''}
                 </span>
               </div>
@@ -106,8 +107,8 @@ export function HopTable() {
                   <div key={c.id} className={`cell ${c.align}`}>
                     {c.id === 'host' ? (
                       <span className="host-line">
-                        <span className="host-name">TCP-пинг :{tcp.port}</span>
-                        <span className="mono muted">{tcp.status === 'refused' ? 'порт закрыт (RST), но узел отвечает' : tcp.status}</span>
+                        <span className="host-name">{L('TCP-пинг', 'TCP ping')} :{tcp.port}</span>
+                        <span className="mono muted">{tcp.status === 'refused' ? L('порт закрыт (RST), но узел отвечает', 'port closed (RST), but the host answers') : tcp.status}</span>
                       </span>
                     ) : c.id === 'loss' ? (
                       <span className={`loss ${lossLevel(tcp.loss)}`}>{pct(tcp.loss)}</span>
@@ -159,16 +160,16 @@ const HopRow = memo(function HopRow({ hop, cols, scaleMax }: { hop: Hop; cols: C
     const st = useStore.getState();
     const copy = (text: string) => {
       void request('clipboard.copy', { text });
-      st.notify(`Скопировано: ${text}`);
+      st.notify(`${L('Скопировано', 'Copied')}: ${text}`);
     };
     openMenu(e, [
-      { title: `Хоп ${hop.ttl} · ${info?.hostname ?? hop.primary}` },
-      { label: 'Трассировать до узла', icon: <Play size={11} />, hint: hop.primary, disabled: hop.isDestination, onSelect: () => st.start(hop.primary!) },
-      { label: 'Показать подробности', onSelect: () => st.selectedTtl !== hop.ttl && st.setSelected(hop.ttl) },
+      { title: `${L('Хоп', 'Hop')} ${hop.ttl} · ${info?.hostname ?? hop.primary}` },
+      { label: L('Трассировать до узла', 'Trace to this host'), icon: <Play size={11} />, hint: hop.primary, disabled: hop.isDestination, onSelect: () => st.start(hop.primary!) },
+      { label: L('Показать подробности', 'Show details'), onSelect: () => st.selectedTtl !== hop.ttl && st.setSelected(hop.ttl) },
       { separator: true },
-      { label: 'Копировать IP', icon: <Copy size={13} />, onSelect: () => copy(hop.primary!) },
-      { label: 'Копировать имя', icon: <Copy size={13} />, disabled: !info?.hostname, onSelect: () => copy(info!.hostname!) },
-      { label: 'Копировать строку', icon: <Copy size={13} />, onSelect: () => copy(rowText(hop, info)) },
+      { label: L('Копировать IP', 'Copy IP'), icon: <Copy size={13} />, onSelect: () => copy(hop.primary!) },
+      { label: L('Копировать имя', 'Copy name'), icon: <Copy size={13} />, disabled: !info?.hostname, onSelect: () => copy(info!.hostname!) },
+      { label: L('Копировать строку', 'Copy row'), icon: <Copy size={13} />, onSelect: () => copy(rowText(hop, info)) },
     ]);
   };
 
@@ -207,7 +208,7 @@ function CellValue({ col, hop, info, scaleMax, pulseKey }: { col: Column; hop: H
       if (!hop.primary)
         return (
           <span className="host-line">
-            <span className="host-name muted">{hop.sent === 0 ? 'ожидание…' : 'Нет ответа'}</span>
+            <span className="host-name muted">{hop.sent === 0 ? L('ожидание…', 'waiting…') : L('Нет ответа', 'No reply')}</span>
             <span className="mono muted">* * *</span>
           </span>
         );
@@ -257,15 +258,16 @@ function CellValue({ col, hop, info, scaleMax, pulseKey }: { col: Column; hop: H
 
 const isError = (s: string) => !['ok', 'ttl-expired', 'timeout', 'pending'].includes(s);
 
-const kindText: Record<string, string> = {
-  private: 'локальная сеть',
-  cgnat: 'CGNAT провайдера',
-  'link-local': 'link-local',
-  loopback: 'loopback',
-  ula: 'частный IPv6',
-  multicast: 'multicast',
-  reserved: 'зарезервирован',
-};
+const kindText = (k: string) =>
+  ({
+    private: L('локальная сеть', 'local network'),
+    cgnat: L('CGNAT провайдера', 'provider CGNAT'),
+    'link-local': 'link-local',
+    loopback: 'loopback',
+    ula: L('частный IPv6', 'private IPv6'),
+    multicast: 'multicast',
+    reserved: L('зарезервирован', 'reserved'),
+  })[k] ?? k;
 
 function useHopGeo(ttl: number) {
   return useStore((s) => s.routeGeo?.hops.find((h) => h.ttl === ttl) ?? null);
@@ -275,7 +277,7 @@ function NetCell({ info, hop }: { info?: HostInfo; hop: Hop }) {
   const g = useHopGeo(hop.ttl);
   if (!hop.primary) return null;
   if (!info) return <span className="muted">…</span>;
-  if (info.kind !== 'public') return <span className="muted">{kindText[info.kind] ?? info.kind}</span>;
+  if (info.kind !== 'public') return <span className="muted">{kindText(info.kind)}</span>;
   const place = g && g.lat != null ? [g.city, g.countryCode].filter(Boolean).join(', ') : null;
   return (
     <span className="net-line" title={[info.asn ? `AS${info.asn} ${info.asName ?? ''}` : null, g?.reason].filter(Boolean).join('\n')}>
@@ -283,13 +285,13 @@ function NetCell({ info, hop }: { info?: HostInfo; hop: Hop }) {
         {info.asn ? <span className="mono">AS{info.asn}</span> : null} {info.asName ?? info.isp ?? ''}
       </span>
       {g?.status === 'anycast' ? (
-        <span className="net-place anycast">anycast{place ? `, ближайший: ${place}` : ''}</span>
+        <span className="net-place anycast">anycast{place ? `, ${L('ближайший', 'nearest')}: ${place}` : ''}</span>
       ) : g?.status === 'unresolved' ? (
         <span className="net-place suspect" title={g.reason ?? undefined}>
-          {place ? `? ${place} · не сходится с RTT` : 'нет данных о месте'}
+          {place ? `? ${place} · ${L('не сходится с RTT', 'does not match RTT')}` : L('нет данных о месте', 'no location data')}
         </span>
       ) : g?.status === 'pending' || !g ? (
-        <span className="net-place">определяется…</span>
+        <span className="net-place">{L('определяется…', 'resolving…')}</span>
       ) : (
         place && (
           <span className={`net-place ${g.status}`}>
@@ -305,10 +307,10 @@ function NetCell({ info, hop }: { info?: HostInfo; hop: Hop }) {
 function age(t: number): string {
   if (!t) return '';
   const d = Date.now() - t;
-  if (d < 60_000) return 'только что';
-  if (d < 3_600_000) return `${Math.round(d / 60_000)} мин назад`;
-  if (d < 86_400_000) return `${Math.round(d / 3_600_000)} ч назад`;
-  return new Date(t).toLocaleDateString('ru-RU');
+  if (d < 60_000) return L('только что', 'just now');
+  if (d < 3_600_000) return L(`${Math.round(d / 60_000)} мин назад`, `${Math.round(d / 60_000)} min ago`);
+  if (d < 86_400_000) return L(`${Math.round(d / 3_600_000)} ч назад`, `${Math.round(d / 3_600_000)} h ago`);
+  return new Date(t).toLocaleDateString(locale());
 }
 
 function HopDetails({ hop, info }: { hop: Hop; info?: HostInfo }) {
@@ -318,11 +320,11 @@ function HopDetails({ hop, info }: { hop: Hop; info?: HostInfo }) {
   const notify = useStore((s) => s.notify);
   const copy = (text: string) => {
     void request('clipboard.copy', { text });
-    notify(`Скопировано: ${text}`);
+    notify(`${L('Скопировано', 'Copied')}: ${text}`);
   };
   const place =
     g && g.lat != null && g.status !== 'local'
-      ? `${[g.city, countryName(g.countryCode)].filter(Boolean).join(', ') || 'координаты'} · ${g.lat.toFixed(3)}, ${g.lon!.toFixed(3)}`
+      ? `${[g.city, countryName(g.countryCode)].filter(Boolean).join(', ') || L('координаты', 'coordinates')} · ${g.lat.toFixed(3)}, ${g.lon!.toFixed(3)}`
       : null;
   return (
     <motion.div
@@ -334,7 +336,7 @@ function HopDetails({ hop, info }: { hop: Hop; info?: HostInfo }) {
     >
       <div className="hd-inner">
         <div className="hd-chart">
-          <div className="hd-label">RTT по пакетам, последние 120</div>
+          <div className="hd-label">{L('RTT по пакетам, последние 120', 'RTT per packet, last 120')}</div>
           <Sparkline values={hop.history} width={360} height={56} slots={120} />
           <div className="hd-stats num">
             <span>min {ms(hop.best)}</span>
@@ -344,31 +346,31 @@ function HopDetails({ hop, info }: { hop: Hop; info?: HostInfo }) {
             <span>Jint {ms(hop.jInt)}</span>
             <span>Jmax {ms(hop.jMax)}</span>
           </div>
-          <div className="hd-note">RTT по высокоточному таймеру (микросекунды, включает ~0.1 мс накладных расходов API). На Windows в логе пакетов есть и время ядра в мс.</div>
+          <div className="hd-note">{L('RTT по высокоточному таймеру (микросекунды, включает ~0.1 мс накладных расходов API). На Windows в логе пакетов есть и время ядра в мс.', 'RTT from a high-resolution timer (microseconds, includes ~0.1 ms of API overhead). On Windows the packet log also has the kernel time in ms.')}</div>
         </div>
         <dl className="hd-facts">
           <Fact k="IP" v={hop.primary} mono />
-          <Fact k="Имя" v={info?.hostname ?? (info?.hostnameDone ? 'нет PTR-записи' : hop.primary ? 'определяется…' : null)} mono />
+          <Fact k={L('Имя', 'Name')} v={info?.hostname ?? (info?.hostnameDone ? L('нет PTR-записи', 'no PTR record') : hop.primary ? L('определяется…', 'resolving…') : null)} mono />
           <Fact k="AS" v={info?.asn ? `AS${info.asn} ${info.asName ?? ''}${info.asSource ? ` · ${info.asSource}` : ''}` : null} />
-          <Fact k="Префикс" v={info?.prefix ? `${info.prefix}${info.registry ? ` · ${info.registry.toUpperCase()}` : ''}` : null} mono />
-          <Fact k="Провайдер" v={info?.isp && info.isp !== info.asName ? `${info.isp}${info.org && info.org !== info.isp ? ` (${info.org})` : ''}` : info?.org ?? null} />
-          <Fact k="Место" v={place ?? (g ? statusLabel[g.status] : null)} warn={g?.status === 'unresolved'} />
-          <Fact k="Решение" v={g?.reason ?? null} warn={g?.status === 'unresolved'} />
-          {g?.maxDistanceKm != null && <Fact k="Физ. предел" v={`не дальше ${km(g.maxDistanceKm)} от вас (по минимальному RTT)`} />}
-          <Fact k="ICMP" v={`${statusText[hop.status] ?? hop.status}${hop.consecutiveLoss > 1 ? `, ${hop.consecutiveLoss} потерь подряд` : ''}`} />
+          <Fact k={L('Префикс', 'Prefix')} v={info?.prefix ? `${info.prefix}${info.registry ? ` · ${info.registry.toUpperCase()}` : ''}` : null} mono />
+          <Fact k={L('Провайдер', 'Provider')} v={info?.isp && info.isp !== info.asName ? `${info.isp}${info.org && info.org !== info.isp ? ` (${info.org})` : ''}` : info?.org ?? null} />
+          <Fact k={L('Место', 'Location')} v={place ?? (g ? statusLabel[g.status] : null)} warn={g?.status === 'unresolved'} />
+          <Fact k={L('Решение', 'Decision')} v={g?.reason ?? null} warn={g?.status === 'unresolved'} />
+          {g?.maxDistanceKm != null && <Fact k={L('Физ. предел', 'Physical limit')} v={L(`не дальше ${km(g.maxDistanceKm)} от вас (по минимальному RTT)`, `no farther than ${km(g.maxDistanceKm)} from you (by minimum RTT)`)} />}
+          <Fact k="ICMP" v={`${statusText[hop.status] ?? hop.status}${hop.consecutiveLoss > 1 ? `, ${hop.consecutiveLoss} ${L('потерь подряд', 'lost in a row')}` : ''}`} />
         </dl>
         {g && g.verdicts.length > 0 && (
           <div className="hd-sources">
-            <div className="hd-label">Что говорят источники геолокации</div>
+            <div className="hd-label">{L('Что говорят источники геолокации', 'What the geolocation sources say')}</div>
             {g.verdicts.map((v) => (
               <div key={v.source} className={`src-row ${v.accepted ? 'ok' : 'no'}`}>
                 <span className="src-mark">{v.accepted ? '✓' : '✕'}</span>
                 <span className="src-name">{sourceLabel[v.source] ?? v.source}</span>
                 <span className="src-place">
                   {[v.city, v.countryCode].filter(Boolean).join(', ') || `${v.lat.toFixed(2)}, ${v.lon.toFixed(2)}`}
-                  {v.level !== 'city' && <span className="muted"> (страна)</span>}
+                  {v.level !== 'city' && <span className="muted"> ({L('страна', 'country')})</span>}
                 </span>
-                <span className="src-why">{v.reason ?? (v.accepted ? 'согласуется с RTT' : '')}</span>
+                <span className="src-why">{v.reason ?? (v.accepted ? L('согласуется с RTT', 'consistent with RTT') : '')}</span>
                 <span className="src-age muted">{age(v.fetchedAt)}</span>
               </div>
             ))}
@@ -376,14 +378,14 @@ function HopDetails({ hop, info }: { hop: Hop; info?: HostInfo }) {
         )}
         {hop.responders.length > 1 && (
           <div className="hd-ecmp">
-            <div className="hd-label">Несколько узлов на этом хопе: балансировка (ECMP) или смена маршрута</div>
+            <div className="hd-label">{L('Несколько узлов на этом хопе: балансировка (ECMP) или смена маршрута', 'Several routers on this hop: load balancing (ECMP) or a route change')}</div>
             {hop.responders.map((x) => (
               <div key={x.ip} className="ecmp-row">
                 <span className="ecmp-bar" style={{ width: `${Math.max(2, x.share)}%` }} />
                 <span className="mono">{x.ip}</span>
                 <span className="muted">{hosts[x.ip]?.hostname ?? ''}</span>
                 <span className="num ecmp-n">
-                  {x.share}% · {ms(x.avg)} мс
+                  {x.share}% · {ms(x.avg)} {L('мс', 'ms')}
                 </span>
               </div>
             ))}
@@ -397,12 +399,12 @@ function HopDetails({ hop, info }: { hop: Hop; info?: HostInfo }) {
               </button>
               {info?.hostname && (
                 <button className="btn sm" onClick={() => copy(info.hostname!)}>
-                  <Copy size={13} /> Имя
+                  <Copy size={13} /> {L('Имя', 'Name')}
                 </button>
               )}
               {!hop.isDestination && (
-                <button className="btn sm" onClick={() => start(hop.primary!)} title="Новая трассировка до этого узла">
-                  <Play size={12} /> Трассировать до узла
+                <button className="btn sm" onClick={() => start(hop.primary!)} title={L('Новая трассировка до этого узла', 'New trace to this host')}>
+                  <Play size={12} /> {L('Трассировать до узла', 'Trace to this host')}
                 </button>
               )}
             </>
@@ -424,16 +426,16 @@ function VpnRows({ vpn, cols, scaleMax }: { vpn: VpnBlock; cols: ColDef[]; scale
   return (
     <>
       <div className="seg-row tunnel">
-        <span className="seg-tag accent">Туннель</span>
+        <span className="seg-tag accent">{L('Туннель', 'Tunnel')}</span>
         <span>
-          выход: <span className="mono">{exit?.ip ?? '…'}</span>
+          {L('выход', 'exit')}: <span className="mono">{exit?.ip ?? '…'}</span>
           {exit?.asOrg ? ` · ${exit.asOrg}` : ''}
           {exit?.city ? ` · ${exit.city}${exit.country ? `, ${exit.country}` : ''}` : ''}
           {exit?.colo ? ` · Cloudflare ${exit.colo}` : ''}
         </span>
         {vpn.legMs != null && (
-          <span className="seg-leg" title="Сквозной минимальный RTT до цели минус минимальный RTT до сервера VPN">
-            сервер → цель ≈ <b className="num">{ms(vpn.legMs)} мс</b>
+          <span className="seg-leg" title={L('Сквозной минимальный RTT до цели минус минимальный RTT до сервера VPN', 'End-to-end minimum RTT to the target minus minimum RTT to the VPN server')}>
+            {L('сервер → цель', 'server → target')} ≈ <b className="num">{ms(vpn.legMs)} {L('мс', 'ms')}</b>
           </span>
         )}
       </div>
@@ -444,7 +446,7 @@ function VpnRows({ vpn, cols, scaleMax }: { vpn: VpnBlock; cols: ColDef[]; scale
         {cols.map((c) => (
           <div key={c.id} className={`cell ${c.align} ${c.id}`}>
             {c.id === 'host' ? (
-              <span className="host-line" title="Время ответа на HTTP-запрос через туннель (keep-alive): настоящая сквозная задержка">
+              <span className="host-line" title={L('Время ответа на HTTP-запрос через туннель (keep-alive): настоящая сквозная задержка', 'Response time of an HTTP request through the tunnel (keep-alive): the real end-to-end latency')}>
                 <span className="host-name">{vpn.target}</span>
                 <span className="mono host-ip">{vpn.targetIp ?? ''}</span>
                 <span className="badge accent">
@@ -453,7 +455,7 @@ function VpnRows({ vpn, cols, scaleMax }: { vpn: VpnBlock; cols: ColDef[]; scale
               </span>
             ) : c.id === 'asn' ? (
               <span className="net-line">
-                <span className="net-as">через туннель{vpn.status && !['https', 'http'].includes(vpn.status) ? ` · ${vpn.status}` : ''}</span>
+                <span className="net-as">{L('через туннель', 'through the tunnel')}{vpn.status && !['https', 'http'].includes(vpn.status) ? ` · ${vpn.status}` : ''}</span>
                 {t && t.lat != null && <span className={`net-place ${t.status}`}>{[t.city, t.countryCode].filter(Boolean).join(', ')}</span>}
               </span>
             ) : c.id === 'loss' ? (
@@ -480,9 +482,8 @@ function VpnRows({ vpn, cols, scaleMax }: { vpn: VpnBlock; cols: ColDef[]; scale
       </div>
       {vpn.connectFaked && (
         <div className="seg-note">
-          TCP-соединение «устанавливается» за доли миллисекунды: его подтверждает сам туннель. Поэтому задержка меряется по ответу на HTTP-запрос, он действительно
-          доходит до цели.
-          {vpn.setupMs != null && ` Установка ${vpn.method.toUpperCase()}: ${ms(vpn.setupMs)} мс.`}
+          {L('TCP-соединение «устанавливается» за доли миллисекунды: его подтверждает сам туннель. Поэтому задержка меряется по ответу на HTTP-запрос, он действительно доходит до цели.', 'The TCP connection "opens" in a fraction of a millisecond: the tunnel itself acknowledges it. That is why latency is measured by the HTTP response, which really reaches the target.')}
+          {vpn.setupMs != null && ` ${L('Установка', 'Setup')} ${vpn.method.toUpperCase()}: ${ms(vpn.setupMs)} ${L('мс', 'ms')}.`}
         </div>
       )}
     </>
@@ -511,7 +512,7 @@ function ColumnPicker() {
   }, [open]);
   return (
     <div className="colpick" ref={ref}>
-      <button className={`btn ghost sm icon ${open ? 'active' : ''}`} onClick={() => setOpen(!open)} title="Колонки" aria-label="Выбрать колонки">
+      <button className={`btn ghost sm icon ${open ? 'active' : ''}`} onClick={() => setOpen(!open)} title={L('Колонки', 'Columns')} aria-label={L('Выбрать колонки', 'Choose columns')}>
         <Columns size={14} />
       </button>
       {open && (
@@ -529,8 +530,8 @@ function ColumnPicker() {
                   aria-checked={on}
                 >
                   <span className={`check ${on ? 'on' : ''}`} />
-                  <span>{COLS[c].label}</span>
-                  <span className="hint">{COLS[c].title}</span>
+                  <span>{COLS()[c].label}</span>
+                  <span className="hint">{COLS()[c].title}</span>
                 </button>
               );
             })}
@@ -573,12 +574,12 @@ function EmptyState() {
     return (
       <div className="hops-empty error">
         <Alert size={22} />
-        <h2>Трассировка не запустилась</h2>
+        <h2>{L('Трассировка не запустилась', 'The trace did not start')}</h2>
         <p className="selectable">{session.error}</p>
         <div className="hops-empty-actions">
           {(code === 'no-address' || code === 'adapter-down' || code === 'adapter-missing') && (
             <button className="btn" onClick={() => openGate(true)}>
-              Выбрать другой адаптер
+              {L('Выбрать другой адаптер', 'Choose another adapter')}
             </button>
           )}
           {code === 'no-address' && options.ipVersion !== '4' && (
@@ -589,11 +590,11 @@ function EmptyState() {
                 setTimeout(() => start(session.input), 50);
               }}
             >
-              Повторить по IPv4
+              {L('Повторить по IPv4', 'Retry over IPv4')}
             </button>
           )}
           <button className="btn primary" onClick={() => start(session.input)}>
-            Повторить
+            {L('Повторить', 'Retry')}
           </button>
         </div>
       </div>
@@ -603,8 +604,8 @@ function EmptyState() {
   return (
     <div className="hops-empty">
       <Route size={22} />
-      <h2>{session ? 'Трассировка остановлена' : 'Куда проложить маршрут?'}</h2>
-      <p>Введите IP-адрес, домен или ссылку в строке сверху и нажмите Enter. Каждый узел на пути появится строкой с потерями, задержками и местом на карте.</p>
+      <h2>{session ? L('Трассировка остановлена', 'Trace stopped') : L('Куда проложить маршрут?', 'Where should the route go?')}</h2>
+      <p>{L('Введите IP-адрес, домен или ссылку в строке сверху и нажмите Enter. Каждый узел на пути появится строкой с потерями, задержками и местом на карте.', 'Type an IP address, a domain or a link in the field above and press Enter. Every router on the path appears as a row with loss, latency and a place on the map.')}</p>
       <div className="chips">
         {chips.map((c) => (
           <button key={c} className="chip mono" onClick={() => start(c)}>
@@ -613,7 +614,7 @@ function EmptyState() {
         ))}
       </div>
       <div className="hops-empty-tip">
-        <Pin size={13} /> Подсказка: в WinMTR потери на промежуточном хопе часто пугают зря. Здесь под таблицей появится разбор, где проблема настоящая.
+        <Pin size={13} /> {L('Подсказка: в WinMTR потери на промежуточном хопе часто пугают зря. Здесь под таблицей появится разбор, где проблема настоящая.', 'Tip: in WinMTR, loss on an intermediate hop often scares people for nothing. Here an analysis below the table shows where the problem is real.')}
       </div>
     </div>
   );

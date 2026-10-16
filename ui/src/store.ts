@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import { on, request } from './bridge/client';
+import { lang as i18nLang, setLang as setI18nLang } from './i18n';
+import { applyTheme, resolveTheme, savedTheme, type ResolvedTheme, type ThemeId } from './theme';
 import {
   defaultOptions,
+  defaultProviders,
+  defaultUrlTemplate,
+  type GeoDbSetting,
+  type GeoProviders,
+  type UpdateInfo,
   type AdapterInfo,
   type AppInfo,
   type Connection,
@@ -28,6 +35,7 @@ export type DockTab = 'probes' | 'events' | 'chart' | 'connections' | 'details';
 export type Projection = 'globe' | 'mercator';
 export type View = 'trace' | 'history';
 export type Lang = 'ru' | 'en';
+export type SettingsTab = 'general' | 'geo' | 'sources' | 'updates';
 
 export const allColumns = ['host', 'asn', 'loss', 'sent', 'recv', 'last', 'avg', 'best', 'worst', 'stdev', 'gmean', 'jitter', 'javg', 'jmax', 'jint', 'history'] as const;
 export type Column = (typeof allColumns)[number];
@@ -35,6 +43,7 @@ export const defaultColumns: Column[] = ['host', 'asn', 'loss', 'sent', 'recv', 
 
 export interface UiPrefs {
   lang: Lang;
+  theme: ThemeId;
   projection: Projection;
   mapDetail: boolean;
   columns: Column[];
@@ -46,6 +55,7 @@ export interface UiPrefs {
 
 const defaultUi: UiPrefs = {
   lang: 'ru',
+  theme: savedTheme(),
   projection: 'mercator',
   mapDetail: false,
   columns: defaultColumns,
@@ -116,6 +126,17 @@ export interface Store {
   view: View;
   previousRun: RunSummary | null;
 
+  lang: Lang;
+  theme: ThemeId;
+  resolvedTheme: ResolvedTheme;
+  settingsTab: SettingsTab | null;
+  providers: GeoProviders;
+  geoDb: GeoDbSetting;
+  updateRepo: string;
+  update: UpdateInfo | null;
+  updateChecking: boolean;
+  updateAvailable: boolean;
+
   connections: Connection[];
   connLog: { t: number; kind: 'open' | 'close'; c: ConnBrief }[];
 
@@ -141,9 +162,31 @@ export interface Store {
   setHover(ttl: number | null): void;
   setSelected(ttl: number | null): void;
   notify(text: string, level?: 'info' | 'error'): void;
+
+  setLang(l: Lang): Promise<void>;
+  setTheme(t: ThemeId): void;
+  openSettings(tab: SettingsTab | null): void;
+  setProviders(p: Partial<GeoProviders>): Promise<void>;
+  setGeoDb(p: Partial<GeoDbSetting>): Promise<void>;
+  setUpdateRepo(repo: string): Promise<void>;
+  checkUpdate(): Promise<void>;
 }
 
 let saveTimer: number | undefined;
+let initStarted = false;
+
+/** Re-applies "system" when the OS switches between light and dark. */
+function watchSystemTheme(get: () => Store, set: (p: Partial<Store>) => void) {
+  try {
+    window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', () => {
+      if (get().theme !== 'system') return;
+      applyTheme('system');
+      set({ resolvedTheme: resolveTheme('system') });
+    });
+  } catch {
+    /* no matchMedia */
+  }
+}
 let toastId = 0;
 
 export const useStore = create<Store>((set, get) => ({
@@ -181,6 +224,17 @@ export const useStore = create<Store>((set, get) => ({
   view: 'trace',
   previousRun: null,
 
+  lang: i18nLang(),
+  theme: savedTheme(),
+  resolvedTheme: resolveTheme(savedTheme()),
+  settingsTab: null,
+  providers: { ...defaultProviders },
+  geoDb: { autoUpdate: true, active: null, urlTemplate: defaultUrlTemplate },
+  updateRepo: 'extraut/MTRTracer',
+  update: null,
+  updateChecking: false,
+  updateAvailable: false,
+
   connections: [],
   connLog: [],
 
@@ -190,11 +244,23 @@ export const useStore = create<Store>((set, get) => ({
   toast: null,
 
   async init() {
+    if (initStarted) return;
+    initStarted = true;
     subscribe(set, get);
     const [settings, info, geo] = await Promise.all([request('settings.get'), request('app.info'), request('geo.status')]);
     const ui = { ...defaultUi, ...((settings.ui as Partial<UiPrefs>) ?? {}) };
     if (!Array.isArray(ui.columns) || ui.columns.length === 0) ui.columns = defaultColumns;
+    const lang: Lang = settings.language ?? info.language ?? i18nLang();
+    setI18nLang(lang);
+    applyTheme(ui.theme);
+    watchSystemTheme(get, set);
     set({
+      lang,
+      theme: ui.theme,
+      resolvedTheme: resolveTheme(ui.theme),
+      providers: { ...defaultProviders, ...(settings.providers ?? {}) },
+      geoDb: settings.geoDb ?? { autoUpdate: true, active: null, urlTemplate: defaultUrlTemplate },
+      updateRepo: settings.updateRepo ?? info.repo ?? 'extraut/MTRTracer',
       ready: true,
       info,
       options: { ...defaultOptions, ...settings.options },
@@ -299,6 +365,52 @@ export const useStore = create<Store>((set, get) => ({
 
   setSelected(ttl) {
     set({ selectedTtl: get().selectedTtl === ttl ? null : ttl });
+  },
+
+  async setLang(l) {
+    setI18nLang(l);
+    set({ lang: l, ui: { ...get().ui, lang: l } });
+    await request('settings.set', { language: l });
+    persist(get);
+  },
+
+  setTheme(t) {
+    applyTheme(t);
+    set({ theme: t, resolvedTheme: resolveTheme(t), ui: { ...get().ui, theme: t } });
+    persist(get);
+  },
+
+  openSettings(tab) {
+    set({ settingsTab: tab });
+  },
+
+  async setProviders(p) {
+    const providers = { ...get().providers, ...p };
+    set({ providers });
+    await request('settings.set', { providers });
+  },
+
+  async setGeoDb(p) {
+    const geoDb = { ...get().geoDb, ...p };
+    set({ geoDb });
+    await request('settings.set', { geoDb });
+  },
+
+  async setUpdateRepo(repo) {
+    const res = await request('settings.set', { updateRepo: repo });
+    set({ updateRepo: res.updateRepo ?? repo, update: null, updateAvailable: false });
+  },
+
+  async checkUpdate() {
+    set({ updateChecking: true });
+    try {
+      const update = await request('app.checkUpdate');
+      set({ update, updateAvailable: update.newerAvailable });
+    } catch (e) {
+      get().notify((e as Error).message, 'error');
+    } finally {
+      set({ updateChecking: false });
+    }
   },
 
   notify(text, level = 'info') {

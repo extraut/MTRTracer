@@ -8,9 +8,11 @@ import { RouteMap } from './components/RouteMap';
 import { Dock } from './components/Dock';
 import { HistoryView } from './components/HistoryView';
 import { ContextMenuHost } from './components/ContextMenu';
+import { SettingsDialog } from './components/SettingsDialog';
 import { Alert, Check, Info } from './components/Icons';
 import { duration } from './lib/format';
 import './app.css';
+import { L, locale } from './i18n';
 
 export function App() {
   const init = useStore((s) => s.init);
@@ -44,6 +46,7 @@ export function App() {
       </main>
       <StatusBar />
       <AdapterGate />
+      <SettingsDialog />
       <Toast />
       <ContextMenuHost />
     </div>
@@ -98,16 +101,16 @@ function Insights() {
   return (
     <div className="insights">
       {originNote && (
-        <button className="insight warn" onClick={() => setUi({ dockTab: 'details' })} title="Открыть «Сведения», чтобы указать город вручную">
+        <button className="insight warn" onClick={() => setUi({ dockTab: 'details' })} title={L('Открыть «Сведения», чтобы указать город вручную', 'Open Details to set your city manually')}>
           <Alert size={14} />
           <span>{originNote}</span>
         </button>
       )}
       {previous && (
-        <button className="insight info" onClick={() => setView('history')} title="Открыть историю цели">
+        <button className="insight info" onClick={() => setView('history')} title={L('Открыть историю цели', 'Open the target history')}>
           <Info size={14} />
           <span>
-            В прошлый раз ({new Date(previous.startedAt).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}, {previous.adapterName ?? 'Авто'}{previous.mode === 'vpn' ? ', VPN' : ''}): {previous.avg != null ? `${previous.avg.toFixed(1)} мс` : '—'}, {previous.loss ?? 0}% потерь{nowAvg != null ? ` · сейчас ${nowAvg.toFixed(1)} мс` : ''}
+            {L('В прошлый раз', 'Last time')} ({new Date(previous.startedAt).toLocaleString(locale(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}, {previous.adapterName ?? L('Авто', 'Auto')}{previous.mode === 'vpn' ? ', VPN' : ''}): {previous.avg != null ? `${previous.avg.toFixed(1)} ${L('мс', 'ms')}` : '—'}, {previous.loss ?? 0}% {L('потерь', 'loss')}{nowAvg != null ? ` · ${L('сейчас', 'now')} ${nowAvg.toFixed(1)} ${L('мс', 'ms')}` : ''}
           </span>
         </button>
       )}
@@ -119,7 +122,7 @@ function Insights() {
       ))}
       {notes.length > 3 && (
         <button className="insight more" onClick={() => setUi({ dockTab: 'details' })}>
-          ещё {notes.length - 3}
+          {L('ещё', 'more')} {notes.length - 3}
         </button>
       )}
     </div>
@@ -142,7 +145,8 @@ function NetworkBanner() {
         <motion.div className="banner" initial={{ height: 0, opacity: 0 }} animate={{ height: 34, opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }}>
           <Alert size={14} />
           <span>
-            Сеть недоступна <b className="num">{duration(now - (session?.outageSince ?? now))}</b>. Трассировка на паузе и продолжится сама, как только адаптер снова получит адрес.
+            {L('Сеть недоступна', 'Network unavailable for')} <b className="num">{duration(now - (session?.outageSince ?? now))}</b>.{' '}
+            {L('Трассировка на паузе и продолжится сама, как только адаптер снова получит адрес.', 'Tracing is paused and resumes by itself once the adapter gets an address again.')}
           </span>
         </motion.div>
       )}
@@ -150,15 +154,16 @@ function NetworkBanner() {
   );
 }
 
-const stateText: Record<string, string> = {
-  resolving: 'Определяем адрес',
-  running: 'Идёт трассировка',
-  paused: 'Пауза',
-  'waiting-network': 'Ожидание сети',
-  stopped: 'Остановлено',
-  finished: 'Завершено',
-  error: 'Ошибка',
-};
+const stateText = (s: string) =>
+  ({
+    resolving: L('Определяем адрес', 'Resolving'),
+    running: L('Идёт трассировка', 'Tracing'),
+    paused: L('Пауза', 'Paused'),
+    'waiting-network': L('Ожидание сети', 'Waiting for network'),
+    stopped: L('Остановлено', 'Stopped'),
+    finished: L('Завершено', 'Finished'),
+    error: L('Ошибка', 'Error'),
+  })[s] ?? s;
 
 function StatusBar() {
   const session = useStore((s) => s.session);
@@ -168,9 +173,11 @@ function StatusBar() {
   const info = useStore((s) => s.info);
   const dest = useStore((s) => s.hops.find((h) => h.isDestination));
   const destTtl = useStore((s) => s.destTtl);
+  const openSettings = useStore((s) => s.openSettings);
+  const updateAvailable = useStore((s) => s.updateAvailable);
   return (
     <footer className="statusbar">
-      <span className={`sb-state ${session?.state ?? 'idle'}`}>{session ? stateText[session.state] : 'Готов'}</span>
+      <span className={`sb-state ${session?.state ?? 'idle'}`}>{session ? stateText(session.state) : L('Готов', 'Ready')}</span>
       {session?.targetIp && (
         <span className="mono sb-route">
           {session.sourceIp ?? '…'} → {session.targetIp}
@@ -178,29 +185,36 @@ function StatusBar() {
       )}
       {round > 0 && (
         <span className="num">
-          раунд {round} · {duration(elapsed)}
+          {L('раунд', 'round')} {round} · {duration(elapsed)}
         </span>
       )}
-      {destTtl && <span className="num">{destTtl} хоп. до цели</span>}
+      {destTtl && <span className="num">{destTtl} {L('хоп. до цели', 'hops to target')}</span>}
       {dest && dest.avg != null && (
         <span className="num">
-          цель: {dest.loss}% потерь, {dest.avg.toFixed(1)} мс
+          {L('цель', 'target')}: {dest.loss}% {L('потерь', 'loss')}, {dest.avg.toFixed(1)} {L('мс', 'ms')}
         </span>
       )}
       <span className="sb-spacer" />
       {geo && (
-        <span className={geo.db === 'error' ? 'sb-bad' : ''}>
-          {geo.db === 'ready'
-            ? `гео-база ${geo.dbDate}`
-            : geo.db === 'downloading' || geo.db === 'updating'
-              ? `гео-база: загрузка ${Math.round(geo.progress * 100)}%`
-              : geo.db === 'error'
-                ? 'гео-база: ошибка загрузки'
-                : 'гео-база не загружена'}
-        </span>
+        <button className={`sb-link ${geo.db === 'error' ? 'sb-bad' : ''}`} onClick={() => openSettings('geo')} title={L('Геоданные: версии базы, источники', 'Geo data: database versions, sources')}>
+          {geo.enabled === false
+            ? L('офлайн-база выключена', 'offline database off')
+            : geo.db === 'ready'
+              ? `${L('гео-база', 'geo DB')} ${geo.dbDate}`
+              : geo.db === 'downloading' || geo.db === 'updating'
+                ? `${L('гео-база: загрузка', 'geo DB: downloading')} ${Math.round(geo.progress * 100)}%`
+                : geo.db === 'error'
+                  ? L('гео-база: ошибка загрузки', 'geo DB: download failed')
+                  : L('гео-база не загружена', 'geo DB not loaded')}
+        </button>
       )}
-      {info && !info.isAdmin && <span title="Для ICMP-трассировки права администратора не нужны">без прав администратора</span>}
-      {info && <span className="muted">v{info.version}</span>}
+      {info && !info.isAdmin && <span title={L('Для ICMP-трассировки права администратора не нужны', 'ICMP tracing does not need administrator rights')}>{L('без прав администратора', 'no admin rights')}</span>}
+      {info && (
+        <button className={`sb-link muted ${updateAvailable ? 'sb-update' : ''}`} onClick={() => openSettings('updates')} title={L('Проверить обновления', 'Check for updates')}>
+          v{info.version}
+          {updateAvailable && ` · ${L('есть обновление', 'update available')}`}
+        </button>
+      )}
     </footer>
   );
 }

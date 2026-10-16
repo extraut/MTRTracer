@@ -21,7 +21,7 @@
             <TextBlock x:Name="FallbackText" Foreground="#A6A8B2" FontSize="14" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
                 <Button x:Name="FallbackLink" Content="Скачать WebView2 Runtime" Padding="14,8" Click="OnInstallRuntime" />
-                <Button Content="Закрыть" Padding="14,8" Margin="10,0,0,0" Click="OnCloseClick" />
+                <Button x:Name="FallbackClose" Content="Закрыть" Padding="14,8" Margin="10,0,0,0" Click="OnCloseClick" />
             </StackPanel>
         </StackPanel>
     </Grid>

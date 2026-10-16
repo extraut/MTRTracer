@@ -75,7 +75,7 @@ public sealed class TunnelProbe : IAsyncDisposable
             await _stream.FlushAsync(cts.Token);
             var n = await _stream.ReadAsync(_buffer, cts.Token);
             var rtt = timer.Elapsed.TotalMilliseconds;
-            if (n == 0) throw new IOException("соединение закрыто");
+            if (n == 0) throw new IOException(Loc.S("соединение закрыто", "connection closed"));
             var close = await DrainHeadersAsync(n, cts.Token);
             if (close) await ResetAsync();
             return new TunnelSample(true, rtt, setupMs, connectMs, faked, UsesTls ? "https" : "http");
@@ -83,7 +83,7 @@ public sealed class TunnelProbe : IAsyncDisposable
         catch (OperationCanceledException) when (!ct.IsCancellationRequested)
         {
             await ResetAsync();
-            return new TunnelSample(false, double.NaN, setupMs, connectMs, faked, "таймаут");
+            return new TunnelSample(false, double.NaN, setupMs, connectMs, faked, Loc.S("таймаут", "timeout"));
         }
         catch (Exception e)
         {
@@ -112,13 +112,13 @@ public sealed class TunnelProbe : IAsyncDisposable
     {
         SocketException se => se.SocketErrorCode switch
         {
-            SocketError.ConnectionRefused => "порт закрыт",
-            SocketError.TimedOut => "таймаут",
-            SocketError.HostUnreachable or SocketError.NetworkUnreachable => "нет маршрута",
+            SocketError.ConnectionRefused => Loc.S("порт закрыт", "port closed"),
+            SocketError.TimedOut => Loc.S("таймаут", "timeout"),
+            SocketError.HostUnreachable or SocketError.NetworkUnreachable => Loc.S("нет маршрута", "no route"),
             _ => se.SocketErrorCode.ToString(),
         },
-        System.Security.Authentication.AuthenticationException => "ошибка TLS",
-        IOException => "соединение оборвано",
+        System.Security.Authentication.AuthenticationException => Loc.S("ошибка TLS", "TLS error"),
+        IOException => Loc.S("соединение оборвано", "connection dropped"),
         _ => e.Message,
     };
 

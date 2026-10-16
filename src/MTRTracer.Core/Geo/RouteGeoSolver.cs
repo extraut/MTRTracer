@@ -92,11 +92,11 @@ public static class RouteGeoSolver
                     var where = anchor.City ?? $"{anchor.Lat:0.0}, {anchor.Lon:0.0}";
                     if (o.Source == "manual")
                     {
-                        originNote = $"Указанное вручную место ({o.Label}) в {Math.Round(d):0} км от узла провайдера {h.Ip} ({where}), а он отвечает за {rtt:0.0} мс: так далеко быть не может. Проверьте город во вкладке «Сведения».";
+                        originNote = Loc.S($"Указанное вручную место ({o.Label}) в {Math.Round(d):0} км от узла провайдера {h.Ip} ({where}), а он отвечает за {rtt:0.0} мс: так далеко быть не может. Проверьте город во вкладке «Сведения».", $"The manually set location ({o.Label}) is {Math.Round(d):0} km from your provider's router {h.Ip} ({where}), which answers in {rtt:0.0} ms: it cannot be that far. Check the city on the Details tab.");
                     }
                     else
                     {
-                        originNote = $"Ваше место по данным {(o.Source == "cloudflare" ? "Cloudflare" : "IP")} ({o.Label}) не сходится с задержкой: узел провайдера {h.Ip} ({where}) отвечает за {rtt:0.0} мс, значит вы не дальше {Math.Round(lim):0} км от него. Похоже, запрос ушёл через VPN. Отсчёт ведётся от {where}.";
+                        originNote = Loc.S($"Ваше место по данным {(o.Source == "cloudflare" ? "Cloudflare" : "IP")} ({o.Label}) не сходится с задержкой: узел провайдера {h.Ip} ({where}) отвечает за {rtt:0.0} мс, значит вы не дальше {Math.Round(lim):0} км от него. Похоже, запрос ушёл через VPN. Отсчёт ведётся от {where}.", $"Your location according to {(o.Source == "cloudflare" ? "Cloudflare" : "IP")} ({o.Label}) does not match the latency: your provider's router {h.Ip} ({where}) answers in {rtt:0.0} ms, so you are no farther than {Math.Round(lim):0} km from it. The request probably went through a VPN. Distances are counted from {where}.");
                         o = new GeoPoint(anchor.Lat, anchor.Lon, anchor.City, "first-hop");
                     }
                 }
@@ -123,7 +123,7 @@ public static class RouteGeoSolver
             }
             if (h.Info.Kind != "public")
             {
-                result.Add(new HopGeoDto(h.Ttl, h.Ip, o?.Lat, o?.Lon, "local", null, null, null, "адрес локальной сети или провайдера, место совпадает с вашим", [], limit));
+                result.Add(new HopGeoDto(h.Ttl, h.Ip, o?.Lat, o?.Lon, "local", null, null, null, Loc.S("адрес локальной сети или провайдера, место совпадает с вашим", "local network or provider address, same location as yours"), [], limit));
                 continue;
             }
 
@@ -136,14 +136,14 @@ public static class RouteGeoSolver
                 {
                     var d = Haversine(o.Lat, o.Lon, c.Lat, c.Lon);
                     if (d > lim)
-                        reason = $"{Math.Round(d):0} км от вас, а RTT {eff[i]:0.0} мс допускает не больше {Math.Round(lim):0} км";
+                        reason = Loc.S($"{Math.Round(d):0} км от вас, а RTT {eff[i]:0.0} мс допускает не больше {Math.Round(lim):0} км", $"{Math.Round(d):0} km from you, but an RTT of {eff[i]:0.0} ms allows at most {Math.Round(lim):0} km");
                 }
                 if (reason == null && o != null && prev != null && eff[i] is { } rtt)
                 {
                     var detour = Haversine(o.Lat, o.Lon, prev.Lat, prev.Lon) + Haversine(prev.Lat, prev.Lon, c.Lat, c.Lon);
                     var allowed = rtt * KmPerMsRtt + DetourSlackKm;
                     if (detour > allowed)
-                        reason = $"путь через предыдущий узел ({prev.Label}) {Math.Round(detour):0} км, а RTT {rtt:0.0} мс допускает {Math.Round(allowed):0} км";
+                        reason = Loc.S($"путь через предыдущий узел ({prev.Label}) {Math.Round(detour):0} км, а RTT {rtt:0.0} мс допускает {Math.Round(allowed):0} км", $"the path via the previous router ({prev.Label}) is {Math.Round(detour):0} km, but an RTT of {rtt:0.0} ms allows {Math.Round(allowed):0} km");
                 }
                 if (reason == null) passing.Add(c);
                 verdicts.Add(new CandidateVerdict(c.Source, c.Lat, c.Lon, c.City, c.CountryCode, c.Level, c.FetchedAt, reason == null, reason));
@@ -168,9 +168,9 @@ public static class RouteGeoSolver
                 var confirmed = best.Level == "city" && (bestAgree > 0 || best.Source is GeoSources.RipeIpmap or GeoSources.CloudflareColo);
                 var status = confirmed ? "confirmed" : "single";
                 var reasonText = bestAgree > 0
-                    ? $"{GeoSources.Label(best.Source)}, совпадает ещё с {bestAgree} {(bestAgree == 1 ? "источником" : "источниками")}"
-                    : GeoSources.Label(best.Source) + (best.Level == "city" ? "" : ", только страна");
-                verdicts = verdicts.Select(v => v.Source == best.Source ? v with { Reason = "выбран: " + reasonText } : v).ToList();
+                    ? Loc.S($"{GeoSources.Label(best.Source)}, совпадает ещё с {bestAgree} {(bestAgree == 1 ? "источником" : "источниками")}", $"{GeoSources.Label(best.Source)}, agrees with {bestAgree} more {(bestAgree == 1 ? "source" : "sources")}")
+                    : GeoSources.Label(best.Source) + (best.Level == "city" ? "" : Loc.S(", только страна", ", country only"));
+                verdicts = verdicts.Select(v => v.Source == best.Source ? v with { Reason = Loc.S("выбран: ", "chosen: ") + reasonText } : v).ToList();
                 result.Add(new HopGeoDto(h.Ttl, h.Ip, best.Lat, best.Lon, status, best.Source, best.City, best.CountryCode, reasonText, verdicts, limit));
                 prev = new GeoPoint(best.Lat, best.Lon, best.City ?? h.Ip, best.Source);
                 continue;
@@ -181,7 +181,7 @@ public static class RouteGeoSolver
             {
                 var at = prev ?? o;
                 result.Add(new HopGeoDto(h.Ttl, h.Ip, at?.Lat, at?.Lon, "anycast", null, null, null,
-                    "anycast: адрес обслуживают узлы во многих городах, отвечает ближайший. Координаты из баз указывают на регистрацию, а не на ответивший узел",
+                    Loc.S("anycast: адрес обслуживают узлы во многих городах, отвечает ближайший. Координаты из баз указывают на регистрацию, а не на ответивший узел", "anycast: the address is served from many cities and the nearest one answers. Database coordinates point to the registration, not to the node that answered"),
                     verdicts, limit));
                 continue;
             }
@@ -189,7 +189,7 @@ public static class RouteGeoSolver
             if (h.Info.Candidates.Count == 0)
             {
                 result.Add(new HopGeoDto(h.Ttl, h.Ip, null, null, h.Info.Pending > 0 ? "pending" : "unresolved", null, null, null,
-                    "нет данных о местоположении", verdicts, limit));
+                    Loc.S("нет данных о местоположении", "no location data"), verdicts, limit));
                 continue;
             }
 
@@ -198,10 +198,10 @@ public static class RouteGeoSolver
             // It does not become the anchor for the detour check of later hops.
             var fallback = BestUnchecked(h.Info.Candidates);
             verdicts = verdicts.Select(v => v.Source == fallback.Source
-                ? v with { Reason = "показан на карте без подтверждения: " + v.Reason }
+                ? v with { Reason = Loc.S("показан на карте без подтверждения: ", "shown on the map unconfirmed: ") + v.Reason }
                 : v).ToList();
             result.Add(new HopGeoDto(h.Ttl, h.Ip, fallback.Lat, fallback.Lon, "unresolved", fallback.Source, fallback.City, fallback.CountryCode,
-                $"{GeoSources.Label(fallback.Source)}: место не сходится с измеренной задержкой, показано как есть",
+                Loc.S($"{GeoSources.Label(fallback.Source)}: место не сходится с измеренной задержкой, показано как есть", $"{GeoSources.Label(fallback.Source)}: the location does not match the measured latency, shown as is"),
                 verdicts, limit));
         }
 

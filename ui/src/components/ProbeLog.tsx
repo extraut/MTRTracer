@@ -1,3 +1,4 @@
+import { L, locale } from '../i18n';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { probeBuffer, useStore } from '../store';
@@ -55,21 +56,21 @@ export function ProbeLog() {
   return (
     <div className="panel log">
       <div className="panel-tools">
-        <select className="field sm" value={ttl} onChange={(e) => setTtl(Number(e.target.value))} aria-label="Хоп">
-          <option value={0}>Все хопы</option>
+        <select className="field sm" value={ttl} onChange={(e) => setTtl(Number(e.target.value))} aria-label={L('Хоп', 'Hop')}>
+          <option value={0}>{L('Все хопы', 'All hops')}</option>
           {Array.from({ length: hops }, (_, i) => (
             <option key={i + 1} value={i + 1}>
-              Хоп {i + 1}
+              {L('Хоп', 'Hop')} {i + 1}
             </option>
           ))}
         </select>
         <div className="seg">
           {(
             [
-              ['all', 'Все'],
-              ['replies', 'Ответы'],
-              ['lost', 'Потери'],
-              ['errors', 'Ошибки ICMP'],
+              ['all', L('Все', 'All')],
+              ['replies', L('Ответы', 'Replies')],
+              ['lost', L('Потери', 'Lost')],
+              ['errors', L('Ошибки ICMP', 'ICMP errors')],
             ] as const
           ).map(([k, l]) => (
             <button key={k} className={filter === k ? 'on' : ''} onClick={() => setFilter(k)}>
@@ -79,29 +80,29 @@ export function ProbeLog() {
         </div>
         <label className="search">
           <Search size={13} />
-          <input className="field sm mono" placeholder="IP, статус или seq" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className="field sm mono" placeholder={L('IP, статус или seq', 'IP, status or seq')} value={query} onChange={(e) => setQuery(e.target.value)} />
         </label>
-        <span className="panel-count num">{rows.length.toLocaleString('ru-RU')} пакетов</span>
-        <button className={`btn sm ${autoScroll ? 'active' : ''}`} onClick={() => setUi({ logAutoScroll: !autoScroll })} title="Прокручивать к новым пакетам">
-          Следить
+        <span className="panel-count num">{rows.length.toLocaleString(locale())} {L('пакетов', 'packets')}</span>
+        <button className={`btn sm ${autoScroll ? 'active' : ''}`} onClick={() => setUi({ logAutoScroll: !autoScroll })} title={L('Прокручивать к новым пакетам', 'Scroll to new packets')}>
+          {L('Следить', 'Follow')}
         </button>
       </div>
       <div className="log-head">
-        <span>Время</span>
-        <span className="r">Раунд</span>
+        <span>{L('Время', 'Time')}</span>
+        <span className="r">{L('Раунд', 'Round')}</span>
         <span className="r">Seq</span>
         <span className="r">TTL</span>
-        <span>Ответил</span>
-        <span>Статус ICMP</span>
-        <span className="r">RTT, мс</span>
-        <span className="r">Ядро</span>
-        <span className="r">Байт</span>
-        <span>Источник</span>
+        <span>{L('Ответил', 'Replied')}</span>
+        <span>{L('Статус ICMP', 'ICMP status')}</span>
+        <span className="r">RTT, {L('мс', 'ms')}</span>
+        <span className="r">{L('Ядро', 'Kernel')}</span>
+        <span className="r">{L('Байт', 'Bytes')}</span>
+        <span>{L('Источник', 'Source')}</span>
         <span>Proto</span>
       </div>
       <div className="log-body" ref={scroller} onWheel={() => autoScroll && setUi({ logAutoScroll: false })}>
         {rows.length === 0 ? (
-          <div className="empty">Здесь будет каждый отправленный пакет: время с миллисекундами, TTL, кто ответил, код ICMP и RTT с точностью до микросекунды.</div>
+          <div className="empty">{L('Здесь будет каждый отправленный пакет: время с миллисекундами, TTL, кто ответил, код ICMP и RTT с точностью до микросекунды.', 'Every packet sent shows up here: time with milliseconds, TTL, who replied, the ICMP code and RTT down to the microsecond.')}</div>
         ) : (
           <div style={{ height: virt.getTotalSize(), position: 'relative' }}>
             {virt.getVirtualItems().map((vi) => {

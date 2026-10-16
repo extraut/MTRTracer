@@ -1,8 +1,13 @@
 // Simulated host for running the UI in a plain browser (vite dev). Mirrors the C# host closely enough to
 // exercise every screen: adapters and tunnels, MTR with loss/jitter/ECMP, the geo solver (including wrong
 // database candidates and anycast), VPN mode, history, connections. Never touches the network.
+import { L } from '../i18n';
 import {
   defaultOptions,
+  defaultProviders,
+  defaultUrlTemplate,
+  type GeoDbRelease,
+  type GeoStatus,
   type AdapterInfo,
   type AppSettings,
   type CandidateVerdict,
@@ -38,32 +43,32 @@ interface SimHop {
   anycast?: boolean;
 }
 
-const HOME = { lat: 52.2297, lon: 21.0122, label: 'Варшава', source: 'cloudflare' } satisfies GeoPoint;
+const HOME = { lat: 52.2297, lon: 21.0122, label: L('Варшава', 'Warsaw'), source: 'cloudflare' } satisfies GeoPoint;
 
 const isp: SimHop[] = [
   { ips: ['10.0.0.1'], host: ['router.lan'], base: 0.9, spread: 0.4, loss: 0, kind: 'private' },
-  { ips: ['198.51.100.10'], host: ['gw1.waw.example-isp.net'], base: 4.2, spread: 2.2, loss: 0, asn: [64500, 'Example ISP'], cands: [['hint', 52.23, 21.01, 'Варшава', 'PL'], ['maxmind', 52.23, 21.02, 'Warsaw', 'PL'], ['dbip', 52.23, 21.01, 'Warsaw', 'PL']] },
+  { ips: ['198.51.100.10'], host: ['gw1.waw.example-isp.net'], base: 4.2, spread: 2.2, loss: 0, asn: [64500, 'Example ISP'], cands: [['hint', 52.23, 21.01, L('Варшава', 'Warsaw'), 'PL'], ['maxmind', 52.23, 21.02, 'Warsaw', 'PL'], ['dbip', 52.23, 21.01, 'Warsaw', 'PL']] },
   { ips: ['100.64.12.1'], host: [null], base: 5.1, spread: 1.6, loss: 0, kind: 'cgnat' },
-  { ips: ['198.51.100.20'], host: ['ae7.waw-bb1.example-backbone.net'], base: 6.8, spread: 1.5, loss: 0.32, asn: [64501, 'Example Backbone'], cands: [['hint', 52.23, 21.01, 'Варшава', 'PL'], ['dbip', 52.23, 21.01, 'Warsaw', 'PL']] },
+  { ips: ['198.51.100.20'], host: ['ae7.waw-bb1.example-backbone.net'], base: 6.8, spread: 1.5, loss: 0.32, asn: [64501, 'Example Backbone'], cands: [['hint', 52.23, 21.01, L('Варшава', 'Warsaw'), 'PL'], ['dbip', 52.23, 21.01, 'Warsaw', 'PL']] },
   { ips: ['0.0.0.0'], host: [null], base: 0, spread: 0, loss: 1, silent: true },
-  { ips: ['198.51.100.30'], host: ['ber-ix.example-backbone.net'], base: 12.4, spread: 1.8, loss: 0, asn: [64501, 'Example Backbone'], cands: [['hint', 52.52, 13.40, 'Берлин', 'DE'], ['maxmind', 52.23, 21.01, 'Warsaw', 'PL']] },
+  { ips: ['198.51.100.30'], host: ['ber-ix.example-backbone.net'], base: 12.4, spread: 1.8, loss: 0, asn: [64501, 'Example Backbone'], cands: [['hint', 52.52, 13.40, L('Берлин', 'Berlin'), 'DE'], ['maxmind', 52.23, 21.01, 'Warsaw', 'PL']] },
 ];
 
 function route(target: string, ip: string): SimHop[] {
   if (/google|youtube|8\.8/.test(target))
     return [
       ...isp,
-      { ips: ['62.115.137.38', '62.115.137.40'], host: ['sto-b2-link.ip.twelve99.net', 'sto-b2-link2.ip.twelve99.net'], base: 31, spread: 1.5, loss: 0, asn: [1299, 'Arelion'], cands: [['ripe-ipmap', 59.33, 18.07, 'Stockholm', 'SE'], ['hint', 59.33, 18.07, 'Стокгольм', 'SE'], ['dbip', 59.33, 18.07, 'Stockholm', 'SE']] },
+      { ips: ['62.115.137.38', '62.115.137.40'], host: ['sto-b2-link.ip.twelve99.net', 'sto-b2-link2.ip.twelve99.net'], base: 31, spread: 1.5, loss: 0, asn: [1299, 'Arelion'], cands: [['ripe-ipmap', 59.33, 18.07, 'Stockholm', 'SE'], ['hint', 59.33, 18.07, L('Стокгольм', 'Stockholm'), 'SE'], ['dbip', 59.33, 18.07, 'Stockholm', 'SE']] },
       // DB-IP puts this backbone router at the operator's US address: impossible at 39 ms from the user.
-      { ips: ['62.115.124.118'], host: ['hbg-bb2-link.ip.twelve99.net'], base: 39, spread: 2, loss: 0.25, asn: [1299, 'Arelion'], cands: [['dbip', 39.04, -77.49, 'Ashburn', 'US'], ['ipapi', 40.71, -74.0, 'New York', 'US'], ['hint', 53.55, 9.99, 'Гамбург', 'DE']] },
-      { ips: ['62.115.114.89'], host: ['ffm-bb1-link.ip.twelve99.net'], base: 44, spread: 2, loss: 0, asn: [1299, 'Arelion'], cands: [['hint', 50.11, 8.68, 'Франкфурт', 'DE'], ['maxmind', 50.11, 8.68, 'Frankfurt am Main', 'DE']] },
+      { ips: ['62.115.124.118'], host: ['hbg-bb2-link.ip.twelve99.net'], base: 39, spread: 2, loss: 0.25, asn: [1299, 'Arelion'], cands: [['dbip', 39.04, -77.49, 'Ashburn', 'US'], ['ipapi', 40.71, -74.0, 'New York', 'US'], ['hint', 53.55, 9.99, L('Гамбург', 'Hamburg'), 'DE']] },
+      { ips: ['62.115.114.89'], host: ['ffm-bb1-link.ip.twelve99.net'], base: 44, spread: 2, loss: 0, asn: [1299, 'Arelion'], cands: [['hint', 50.11, 8.68, L('Франкфурт', 'Frankfurt'), 'DE'], ['maxmind', 50.11, 8.68, 'Frankfurt am Main', 'DE']] },
       { ips: ['142.250.164.34'], host: [null], base: 45, spread: 1, loss: 0, asn: [15169, 'Google LLC'], cands: [['ripe-ipmap', 50.11, 8.68, 'Frankfurt', 'DE'], ['dbip', 37.42, -122.08, 'Mountain View', 'US']] },
-      { ips: [ip], host: ['fra16s56-in-f14.1e100.net'], base: 45.5, spread: 1.2, loss: 0, asn: [15169, 'Google LLC'], cands: [['hint', 50.11, 8.68, 'Франкфурт', 'DE'], ['maxmind', 50.11, 8.68, 'Frankfurt am Main', 'DE'], ['dbip', 37.42, -122.08, 'Mountain View', 'US']] },
+      { ips: [ip], host: ['fra16s56-in-f14.1e100.net'], base: 45.5, spread: 1.2, loss: 0, asn: [15169, 'Google LLC'], cands: [['hint', 50.11, 8.68, L('Франкфурт', 'Frankfurt'), 'DE'], ['maxmind', 50.11, 8.68, 'Frankfurt am Main', 'DE'], ['dbip', 37.42, -122.08, 'Mountain View', 'US']] },
     ];
   // 1.1.1.1 and similar: anycast, answered by the nearest Cloudflare node; databases say USA / Australia.
   return [
     ...isp.slice(0, 4),
-    { ips: ['188.254.2.6'], host: ['waw-ix.cloudflare.example'], base: 7.1, spread: 0.8, loss: 0, asn: [13335, 'Cloudflare'], cands: [['hint', 52.23, 21.01, 'Варшава', 'PL'], ['dbip', 37.77, -122.42, 'San Francisco', 'US']], anycast: true },
+    { ips: ['188.254.2.6'], host: ['waw-ix.cloudflare.example'], base: 7.1, spread: 0.8, loss: 0, asn: [13335, 'Cloudflare'], cands: [['hint', 52.23, 21.01, L('Варшава', 'Warsaw'), 'PL'], ['dbip', 37.77, -122.42, 'San Francisco', 'US']], anycast: true },
     { ips: [ip], host: [/^\d/.test(target) ? 'one.one.one.one' : target], base: 7.4, spread: 0.9, loss: 0.01, asn: [13335, 'Cloudflare'], cands: [['dbip', 37.77, -122.42, 'San Francisco', 'US'], ['ipapi', -27.47, 153.02, 'Brisbane', 'AU']], anycast: true },
   ];
 }
@@ -71,7 +76,7 @@ function route(target: string, ip: string): SimHop[] {
 function vpnUnderlay(): SimHop[] {
   return [
     ...isp,
-    { ips: ['198.51.100.60'], host: ['ams-ix.example-backbone.net'], base: 21, spread: 1.5, loss: 0, asn: [64501, 'Example Backbone'], cands: [['ripe-ipmap', 52.37, 4.9, 'Amsterdam', 'NL'], ['hint', 52.37, 4.9, 'Амстердам', 'NL']] },
+    { ips: ['198.51.100.60'], host: ['ams-ix.example-backbone.net'], base: 21, spread: 1.5, loss: 0, asn: [64501, 'Example Backbone'], cands: [['ripe-ipmap', 52.37, 4.9, 'Amsterdam', 'NL'], ['hint', 52.37, 4.9, L('Амстердам', 'Amsterdam'), 'NL']] },
     { ips: ['192.0.2.44'], host: ['vps44.example-hosting.net'], base: 22.5, spread: 1.4, loss: 0, asn: [64502, 'Example Hosting'], cands: [['maxmind', 52.37, 4.9, 'Amsterdam', 'NL'], ['ripe-ipmap', 52.35, 4.92, 'Amsterdam', 'NL']] },
   ];
 }
@@ -83,7 +88,7 @@ const hav = (a: { lat: number; lon: number }, b: { lat: number; lon: number }) =
   return 2 * 6371 * Math.asin(Math.min(1, Math.sqrt(h)));
 };
 const weight: Record<string, number> = { 'ripe-ipmap': 6, 'cf-colo': 6, hint: 5, maxmind: 3, dbip: 2, ipapi: 1.5 };
-const label: Record<string, string> = { 'ripe-ipmap': 'RIPE IPmap', hint: 'имя роутера', maxmind: 'MaxMind GeoLite (RIPEstat)', dbip: 'DB-IP Lite', ipapi: 'ip-api.com' };
+const label: Record<string, string> = { 'ripe-ipmap': 'RIPE IPmap', hint: L('имя роутера', 'router name'), maxmind: 'MaxMind GeoLite (RIPEstat)', dbip: 'DB-IP Lite', ipapi: 'ip-api.com' };
 
 function solve(sessionId: string, origin: GeoPoint, hops: Hop[], hosts: Map<string, HostInfo>): RouteGeo {
   const eff: (number | null)[] = [];
@@ -101,17 +106,17 @@ function solve(sessionId: string, origin: GeoPoint, hops: Hop[], hosts: Map<stri
     if (!h.primary) return out.push({ ...base, lat: null, lon: null, status: 'silent', reason: null, verdicts: [] });
     const info = hosts.get(h.primary);
     if (!info) return out.push({ ...base, lat: null, lon: null, status: 'pending', reason: null, verdicts: [] });
-    if (info.kind !== 'public') return out.push({ ...base, lat: origin.lat, lon: origin.lon, status: 'local', reason: 'адрес локальной сети или провайдера, место совпадает с вашим', verdicts: [] });
+    if (info.kind !== 'public') return out.push({ ...base, lat: origin.lat, lon: origin.lon, status: 'local', reason: L('адрес локальной сети или провайдера, место совпадает с вашим', 'local network or provider address, same location as yours'), verdicts: [] });
     const verdicts: CandidateVerdict[] = [];
     const ok: GeoCandidate[] = [];
     for (const c of info.candidates) {
       let reason: string | null = null;
       const d = hav(origin, c);
-      if (limit != null && d > limit) reason = `${Math.round(d)} км от вас, а RTT ${eff[i]!.toFixed(1)} мс допускает не больше ${Math.round(limit)} км`;
+      if (limit != null && d > limit) reason = L(`${Math.round(d)} км от вас, а RTT ${eff[i]!.toFixed(1)} мс допускает не больше ${Math.round(limit)} км`, `${Math.round(d)} km from you, but an RTT of ${eff[i]!.toFixed(1)} ms allows at most ${Math.round(limit)} km`);
       if (!reason && prev && eff[i] != null) {
         const det = hav(origin, prev) + hav(prev, c);
         const allowed = eff[i]! * 100 + 180;
-        if (det > allowed) reason = `путь через предыдущий узел (${prev.label}) ${Math.round(det)} км, а RTT ${eff[i]!.toFixed(1)} мс допускает ${Math.round(allowed)} км`;
+        if (det > allowed) reason = L(`путь через предыдущий узел (${prev.label}) ${Math.round(det)} км, а RTT ${eff[i]!.toFixed(1)} мс допускает ${Math.round(allowed)} км`, `the path via the previous router (${prev.label}) is ${Math.round(det)} km, but an RTT of ${eff[i]!.toFixed(1)} ms allows ${Math.round(allowed)} km`);
       }
       if (!reason) ok.push(c);
       verdicts.push({ source: c.source, lat: c.lat, lon: c.lon, city: c.city, countryCode: c.countryCode, level: c.level, fetchedAt: c.fetchedAt, accepted: !reason, reason });
@@ -125,20 +130,20 @@ function solve(sessionId: string, origin: GeoPoint, hops: Hop[], hosts: Map<stri
         const s = (weight[c.source] ?? 1) + agree * 1.5;
         if (s > bestScore) [best, bestScore, agreeN] = [c, s, agree];
       }
-      const why = agreeN > 0 ? `${label[best.source]}, совпадает ещё с ${agreeN} ${agreeN === 1 ? 'источником' : 'источниками'}` : label[best.source];
+      const why = agreeN > 0 ? L(`${label[best.source]}, совпадает ещё с ${agreeN} ${agreeN === 1 ? 'источником' : 'источниками'}`, `${label[best.source]}, agrees with ${agreeN} more ${agreeN === 1 ? 'source' : 'sources'}`) : label[best.source];
       prev = { lat: best.lat, lon: best.lon, label: best.city ?? h.primary };
       return out.push({
         ...base, lat: best.lat, lon: best.lon, status: agreeN > 0 || best.source === 'ripe-ipmap' ? 'confirmed' : 'single', source: best.source, city: best.city, countryCode: best.countryCode, reason: why,
-        verdicts: verdicts.map((v) => (v.source === best.source ? { ...v, reason: 'выбран: ' + why } : v)),
+        verdicts: verdicts.map((v) => (v.source === best.source ? { ...v, reason: L('выбран: ', 'chosen: ') + why } : v)),
       });
     }
     if (info.anycast) {
       const at = prev ?? origin;
-      return out.push({ ...base, lat: at.lat, lon: at.lon, status: 'anycast', reason: 'anycast: адрес обслуживают узлы во многих городах, отвечает ближайший. Координаты из баз указывают на регистрацию, а не на ответивший узел', verdicts });
+      return out.push({ ...base, lat: at.lat, lon: at.lon, status: 'anycast', reason: L('anycast: адрес обслуживают узлы во многих городах, отвечает ближайший. Координаты из баз указывают на регистрацию, а не на ответивший узел', 'anycast: the address is served from many cities and the nearest one answers. Database coordinates point to the registration, not to the node that answered'), verdicts });
     }
     const f = [...info.candidates].sort((a, b) => (weight[b.source] ?? 1) - (weight[a.source] ?? 1))[0];
-    if (!f) return out.push({ ...base, lat: null, lon: null, status: 'unresolved', reason: 'нет данных о местоположении', verdicts });
-    return out.push({ ...base, lat: f.lat, lon: f.lon, status: 'unresolved', source: f.source, city: f.city, countryCode: f.countryCode, reason: `${label[f.source]}: место не сходится с измеренной задержкой, показано как есть`, verdicts });
+    if (!f) return out.push({ ...base, lat: null, lon: null, status: 'unresolved', reason: L('нет данных о местоположении', 'no location data'), verdicts });
+    return out.push({ ...base, lat: f.lat, lon: f.lon, status: 'unresolved', source: f.source, city: f.city, countryCode: f.countryCode, reason: L(`${label[f.source]}: место не сходится с измеренной задержкой, показано как есть`, `${label[f.source]}: the location does not match the measured latency, shown as is`), verdicts });
   });
   let path = 0;
   let last: { lat: number; lon: number } = origin;
@@ -227,7 +232,7 @@ const adapters: AdapterInfo[] = [
     isWindowsChoiceV6: false, routeMetric: null, bytesSent: 1_200_000, bytesRecv: 800_000,
   },
   {
-    id: '{D4}', name: 'Беспроводная сеть', description: 'Intel(R) Wi-Fi 6E AX211 160MHz', kind: 'wifi', status: 'down', mac: '02:00:00:00:00:03',
+    id: '{D4}', name: L('Беспроводная сеть', 'Wi-Fi'), description: 'Intel(R) Wi-Fi 6E AX211 160MHz', kind: 'wifi', status: 'down', mac: '02:00:00:00:00:03',
     speedBps: 0, mtu: 1500, ifIndex: 15, ipv6IfIndex: 15, ifType: 'Wireless80211', ipv4: [], ipv6: [], gateways: [], dns: [], dnsSuffix: null,
     dhcp: true, hasGateway: false, hasRoute: false, hasRouteV6: false, isWindowsChoice: false, isWindowsChoiceV6: false, routeMetric: null,
     bytesSent: 0, bytesRecv: 0,
@@ -238,7 +243,7 @@ const tunnel: TunnelInfo = {
   adapterId: '{A1}', adapterName: 'tun0', isDefaultRoute: true, process: 'xray', pid: 4120, processPath: 'C:\\Tools\\xray\\xray.exe',
   servers: [{ ip: '192.0.2.44', port: 443, connections: 6 }, { ip: '149.154.167.51', port: 443, connections: 1 }],
   carrierId: '{B2}', carrierName: 'Ethernet', carrierIp: '10.0.0.2',
-  explanation: 'Туннель «tun0» не имеет своего провода: зашифрованный трафик физически уходит через «Ethernet». Поэтому счётчики Ethernet всегда больше.',
+  explanation: L('Туннель «tun0» не имеет своего провода: зашифрованный трафик физически уходит через «Ethernet». Поэтому счётчики Ethernet всегда больше.', 'Tunnel "tun0" has no wire of its own: its encrypted traffic physically leaves through "Ethernet". That is why the Ethernet counters are always higher.'),
 };
 
 const processes = [
@@ -252,11 +257,11 @@ const processes = [
 ];
 
 const cities = [
-  { city: 'Екатеринбург', cc: 'RU', lat: 56.84, lon: 60.61 },
-  { city: 'Казань', cc: 'RU', lat: 55.8, lon: 49.11 },
-  { city: 'Москва', cc: 'RU', lat: 55.76, lon: 37.62 },
-  { city: 'Новосибирск', cc: 'RU', lat: 55.01, lon: 82.94 },
-  { city: 'Санкт-Петербург', cc: 'RU', lat: 59.93, lon: 30.34 },
+  { city: L('Амстердам', 'Amsterdam'), cc: 'NL', lat: 52.37, lon: 4.9 },
+  { city: L('Берлин', 'Berlin'), cc: 'DE', lat: 52.52, lon: 13.4 },
+  { city: L('Варшава', 'Warsaw'), cc: 'PL', lat: 52.23, lon: 21.01 },
+  { city: L('Прага', 'Prague'), cc: 'CZ', lat: 50.08, lon: 14.44 },
+  { city: L('Франкфурт', 'Frankfurt'), cc: 'DE', lat: 50.11, lon: 8.68 },
 ];
 
 function seedHistory(): RunSummary[] {
@@ -290,8 +295,44 @@ export function createMockHost() {
   const settings: AppSettings = stored ?? {
     adapterId: null, adapterChosen: false, vpnMode: false, vpnServer: null, origin: { mode: 'auto', lat: null, lon: null, label: null },
     options: { ...defaultOptions }, recent: ['1.1.1.1', 'google.com', 'ya.ru'], ui: null,
+    language: null, providers: { ...defaultProviders }, geoDb: { autoUpdate: true, active: null, urlTemplate: defaultUrlTemplate }, updateRepo: 'extraut/MTRTracer',
   };
+  settings.providers ??= { ...defaultProviders };
+  settings.geoDb ??= { autoUpdate: true, active: null, urlTemplate: defaultUrlTemplate };
+  settings.updateRepo ??= 'extraut/MTRTracer';
+  settings.language ??= null;
   const save = () => localStorage.setItem('mock.settings.v2', JSON.stringify(settings));
+  const installed = new Set<string>(['2026-10', '2026-09']);
+  const geo: GeoStatus = { db: 'ready', progress: 1, stage: null, dbDate: '2026-10', error: null, online: true, onlineError: null, active: '2026-10', enabled: settings.providers.offlineDb, autoUpdate: true };
+  const cache = { hosts: 14, ripeIpmap: 212, ripeStatGeo: 188, ripeStatNet: 190, ipApi: 97 };
+  const releases = (): GeoDbRelease[] =>
+    [...installed]
+      .sort()
+      .reverse()
+      .map((id) =>
+        id === 'custom'
+          ? { id, label: L('Свой файл', 'Imported file'), city: true, asn: false, bytes: 61_000_000, type: 'GeoLite2-City', built: '2026-10-07', active: geo.active === id }
+          : { id, label: `DB-IP Lite ${id}`, city: true, asn: true, bytes: 131_000_000 + 9_000_000, type: 'DB-IP Lite', built: id, active: geo.active === id },
+      );
+  const simulateDownload = (month: string) => {
+    geo.db = 'updating';
+    geo.progress = 0;
+    geo.stage = 'dbip-city-lite';
+    const t = window.setInterval(() => {
+      geo.progress = Math.min(1, geo.progress + 0.08);
+      if (geo.progress >= 1) {
+        window.clearInterval(t);
+        installed.add(month);
+        geo.db = 'ready';
+        geo.stage = null;
+        if (!settings.geoDb.active) {
+          geo.active = [...installed].filter((m) => m !== 'custom').sort().at(-1) ?? month;
+          geo.dbDate = geo.active;
+        }
+      }
+      emit('geo.status', { ...geo });
+    }, 200);
+  };
   const runs = seedHistory();
   let runSeq = 100;
 
@@ -377,7 +418,7 @@ export function createMockHost() {
       if (host === 'nonexistent.invalid') {
         state.state = 'error';
         state.errorCode = 'resolve-failed';
-        state.error = `Не удалось получить IP для «${host}»: NXDOMAIN: домен не существует.`;
+        state.error = L(`Не удалось получить IP для «${host}»: NXDOMAIN: домен не существует.`, `Could not resolve "${host}": NXDOMAIN: the domain does not exist.`);
         emit('trace.state', { ...state });
         emit('trace.event', { t: Date.now(), level: 'error', code: 'resolve-failed', message: state.error, ttl: null, ip: null });
         return;
@@ -389,8 +430,8 @@ export function createMockHost() {
       state.family = '4';
       state.startedAt = Date.now();
       emit('trace.state', { ...state });
-      emit('trace.event', { t: Date.now(), level: 'info', code: 'start', message: vpnMode ? `VPN-режим: хопы до сервера ${underTarget} через Ethernet, сквозная задержка до ${input} через tun0.` : `Трассировка ${host} [${targetIp}] с ${state.sourceIp}: интервал ${opts.intervalMs} мс, ${opts.packetSize} байт.`, ttl: null, ip: null });
-      if (fake) emit('trace.event', { t: Date.now(), level: 'error', code: 'fake-replies', message: `Цель «ответила» на первом же хопе за 0.12 мс: это отвечает сам VPN-туннель, а не ${targetIp}. Включите VPN-режим.`, ttl: 1, ip: targetIp });
+      emit('trace.event', { t: Date.now(), level: 'info', code: 'start', message: vpnMode ? L(`VPN-режим: хопы до сервера ${underTarget} через Ethernet, сквозная задержка до ${input} через tun0.`, `VPN mode: hops to server ${underTarget} via Ethernet, end-to-end latency to ${input} via tun0.`) : L(`Трассировка ${host} [${targetIp}] с ${state.sourceIp}: интервал ${opts.intervalMs} мс, ${opts.packetSize} байт.`, `Tracing ${host} [${targetIp}] from ${state.sourceIp}: interval ${opts.intervalMs} ms, ${opts.packetSize} bytes.`), ttl: null, ip: null });
+      if (fake) emit('trace.event', { t: Date.now(), level: 'error', code: 'fake-replies', message: L(`Цель «ответила» на первом же хопе за 0.12 мс: это отвечает сам VPN-туннель, а не ${targetIp}. Включите VPN-режим.`, `The target "answered" on the very first hop in 0.12 ms: that is the VPN tunnel itself, not ${targetIp}. Turn on VPN mode.`), ttl: 1, ip: targetIp });
       sim.forEach((h) => h.ips.forEach((ip) => ip !== '0.0.0.0' && discover(ip, h)));
       if (vpnMode) discover(targetIp, route(host, targetIp).at(-1)!);
       const prev = runs.filter((r) => r.targetKey === host).sort((a, b) => b.startedAt - a.startedAt)[0];
@@ -456,10 +497,10 @@ export function createMockHost() {
         });
         const dest = hopDtos[hopDtos.length - 1];
         const notes = [] as { level: 'ok' | 'info' | 'warn' | 'error'; code: string; text: string; ttl: number | null }[];
-        if (fake) notes.push({ level: 'error', code: 'fake-replies', text: 'Ответы подделаны VPN-туннелем: задержки и хопы в таблице не настоящие. Для туннеля используйте VPN-режим.', ttl: 1 });
+        if (fake) notes.push({ level: 'error', code: 'fake-replies', text: L('Ответы подделаны VPN-туннелем: задержки и хопы в таблице не настоящие. Для туннеля используйте VPN-режим.', 'Replies are faked by the VPN tunnel: latencies and hops in the table are not real. Use VPN mode for the tunnel.'), ttl: 1 });
         else if (round >= 10) {
-          if (!blocked) notes.push({ level: 'ok', code: 'healthy', text: `Маршрут стабилен: ${dest.loss}% потерь, средняя задержка ${dest.avg?.toFixed(1)} мс.`, ttl: dest.ttl });
-          notes.push({ level: 'info', code: 'rate-limit', text: `Хоп 4: ${hopDtos[3]?.loss ?? 0}% потерь, но дальше пакеты проходят. Роутер ограничивает ответы ICMP, на трафик это не влияет.`, ttl: 4 });
+          if (!blocked) notes.push({ level: 'ok', code: 'healthy', text: L(`Маршрут стабилен: ${dest.loss}% потерь, средняя задержка ${dest.avg?.toFixed(1)} мс.`, `Route is stable: ${dest.loss}% loss, ${dest.avg?.toFixed(1)} ms average latency.`), ttl: dest.ttl });
+          notes.push({ level: 'info', code: 'rate-limit', text: L(`Хоп 4: ${hopDtos[3]?.loss ?? 0}% потерь, но дальше пакеты проходят. Роутер ограничивает ответы ICMP, на трафик это не влияет.`, `Hop 4: ${hopDtos[3]?.loss ?? 0}% loss, but packets get through further on. The router rate-limits ICMP replies; traffic is not affected.`), ttl: 4 });
         }
         const geo = solve(id, origin(), hopDtos, hostInfos);
         let vpn: VpnBlock | null = null;
@@ -474,7 +515,7 @@ export function createMockHost() {
             loss: overlay.sent ? Math.round(((overlay.sent - overlay.recv) * 1000) / overlay.sent) / 10 : 0,
             last: r3(overlay.last), best: r3(overlay.best), avg: overlay.recv ? r3(overlay.mean) : null, worst: r3(overlay.worst), jAvg: overlay.jN ? r3(overlay.jSum / overlay.jN) : null,
             setupMs: 71.4, connectFaked: true, serverBest, legMs: overlay.best != null && serverBest != null ? r3(overlay.best - serverBest) : null, status: 'https', history: overlay.history,
-            targetGeo: tg && tg.status === 'anycast' ? { ...tg, lat: 52.31, lon: 4.76, city: 'Amsterdam', reason: 'anycast: отвечает узел рядом с выходом VPN' } : tg,
+            targetGeo: tg && tg.status === 'anycast' ? { ...tg, lat: 52.31, lon: 4.76, city: L('Амстердам', 'Amsterdam'), reason: L('anycast: отвечает узел рядом с выходом VPN', 'anycast: the node near the VPN exit answers') } : tg,
           };
         }
         emit('trace.hops', {
@@ -511,7 +552,7 @@ export function createMockHost() {
         state: listen ? 'LISTEN' : i % 7 === 3 ? 'BOUND' : i % 11 === 5 ? 'TIME_WAIT' : 'ESTABLISHED', pid: 1000 + (i % processes.length) * 412, process: proc, path,
         adapterId: i % 2 ? '{B2}' : '{A1}', adapterName: i % 2 ? 'Ethernet' : 'tun0', remoteKind: listen ? 'none' : 'public',
         remoteHost: listen ? null : ['api.telegram.org', 'fra16s56-in-f14.1e100.net', null, null, 'a23-62-99-10.deploy.akamaitechnologies.com'][i % 5],
-        remoteCountry: listen ? null : ['NL', 'DE', 'US', 'US', 'SE'][i % 5], remoteCity: listen ? null : ['Амстердам', 'Франкфурт', null, 'Сан-Франциско', 'Стокгольм'][i % 5],
+        remoteCountry: listen ? null : ['NL', 'DE', 'US', 'US', 'SE'][i % 5], remoteCity: listen ? null : [L('Амстердам', 'Amsterdam'), L('Франкфурт', 'Frankfurt'), null, L('Сан-Франциско', 'San Francisco'), L('Стокгольм', 'Stockholm')][i % 5],
         remoteAsName: listen ? null : ['Telegram Messenger', 'Google LLC', 'Cloudflare', 'Cloudflare', 'Akamai'][i % 5], firstSeen: now - i * 61_000,
       });
     }
@@ -521,7 +562,7 @@ export function createMockHost() {
   const handle = async (type: string, p: Record<string, unknown> | undefined): Promise<unknown> => {
     switch (type) {
       case 'app.info':
-        return { version: '1.1.0', isAdmin: false, dataDir: 'C:\\Users\\user\\AppData\\Local\\MTRTracer', sessionsDir: '…\\sessions', machine: 'DESKTOP', os: 'Windows 11', history: true };
+        return { version: '1.1.1', language: settings.language ?? undefined, repo: settings.updateRepo, isAdmin: false, dataDir: 'C:\\Users\\user\\AppData\\Local\\MTRTracer', sessionsDir: '…\\sessions', machine: 'DESKTOP', os: 'Windows 11', history: true };
       case 'settings.get':
         return settings;
       case 'settings.set':
@@ -533,6 +574,14 @@ export function createMockHost() {
         }
         if (p && 'vpnMode' in p) settings.vpnMode = !!p.vpnMode;
         if (p && 'vpnServer' in p) settings.vpnServer = (p.vpnServer as string) || null;
+        if (p && 'language' in p) settings.language = (p.language as AppSettings['language']) ?? null;
+        if (p?.providers) {
+          settings.providers = p.providers as AppSettings['providers'];
+          geo.enabled = settings.providers.offlineDb;
+          emit('geo.status', { ...geo });
+        }
+        if (p?.geoDb) settings.geoDb = { ...settings.geoDb, ...(p.geoDb as Partial<AppSettings['geoDb']>) };
+        if (p && 'updateRepo' in p) settings.updateRepo = /^[\w.-]+\/[\w.-]+$/.test(String(p.updateRepo ?? '')) ? String(p.updateRepo) : 'extraut/MTRTracer';
         save();
         return settings;
       case 'adapters.list':
@@ -579,7 +628,7 @@ export function createMockHost() {
           const r = runs.find((x) => x.id === session!.runId);
           if (r) r.endedAt = Date.now();
           emit('trace.state', { ...session.state });
-          emit('trace.event', { t: Date.now(), level: 'info', code: 'stopped', message: 'Остановлено.', ttl: null, ip: null });
+          emit('trace.event', { t: Date.now(), level: 'info', code: 'stopped', message: L('Остановлено.', 'Stopped.'), ttl: null, ip: null });
           emit('history.changed', { target: session.state.overlayInput ?? session.state.host });
         }
         return null;
@@ -591,7 +640,7 @@ export function createMockHost() {
         }
         return null;
       case 'trace.reset':
-        if (!session) throw { code: 'no-session', message: 'Нет активной трассировки.' };
+        if (!session) throw { code: 'no-session', message: L('Нет активной трассировки.', 'No active trace.') };
         return { sessionId: startSession(session.input, settings.options) };
       case 'trace.pmtu':
         await new Promise((r) => setTimeout(r, 1400));
@@ -601,11 +650,68 @@ export function createMockHost() {
         return { host: 'google.com', results: [
           { resolver: '10.0.0.1', via: 'adapter-dns', ms: 3.1, ok: true, error: null, addresses: ['142.250.185.78'] },
           { resolver: '1.1.1.1', via: 'public-dns', ms: 14.7, ok: true, error: null, addresses: ['142.250.185.78'] },
-          { resolver: '9.9.9.9', via: 'public-dns', ms: 2500, ok: false, error: 'таймаут', addresses: [] },
+          { resolver: '9.9.9.9', via: 'public-dns', ms: 2500, ok: false, error: L('таймаут', 'timeout'), addresses: [] },
         ] };
       case 'geo.status':
-        return { db: 'ready', progress: 1, stage: null, dbDate: '2026-10', error: null, online: settings.options.geoOnline, onlineError: null };
+        return { ...geo, online: settings.options.geoOnline };
       case 'geo.download':
+        simulateDownload(String(p?.month ?? '2026-10'));
+        return null;
+      case 'geo.db.list':
+        return { releases: releases(), active: geo.active, pinned: settings.geoDb.active, setting: settings.geoDb, dir: '…\\geo' };
+      case 'geo.db.available':
+        await new Promise((r) => setTimeout(r, 400));
+        return ['2026-10', '2026-09', '2026-08', '2026-07', '2026-06', '2026-05'].map((m, i) => ({ month: m, available: i < 2, bytes: i < 2 ? 62_000_000 : null, installed: installed.has(m) }));
+      case 'geo.db.use':
+        settings.geoDb.active = (p?.id as string | null) ?? null;
+        geo.active = settings.geoDb.active ?? [...installed].sort().at(-1) ?? null;
+        geo.dbDate = geo.active === 'custom' ? 'GeoLite2-City' : geo.active;
+        save();
+        emit('geo.status', { ...geo });
+        return { active: geo.active };
+      case 'geo.db.delete':
+        installed.delete(String(p?.id));
+        if (settings.geoDb.active === p?.id) settings.geoDb.active = null;
+        geo.active = settings.geoDb.active ?? [...installed].filter((m) => m !== 'custom').sort().at(-1) ?? null;
+        geo.dbDate = geo.active;
+        geo.db = geo.active ? 'ready' : 'missing';
+        emit('geo.status', { ...geo });
+        return { active: geo.active };
+      case 'geo.db.import':
+      case 'geo.db.fetch':
+        await new Promise((r) => setTimeout(r, 600));
+        installed.add('custom');
+        settings.geoDb.active = 'custom';
+        geo.active = 'custom';
+        geo.dbDate = 'GeoLite2-City';
+        save();
+        emit('geo.status', { ...geo });
+        return { kind: 'city', active: 'custom' };
+      case 'geo.cache.stats':
+        return { ...cache };
+      case 'geo.cache.clear':
+        Object.assign(cache, { ripeIpmap: 0, ripeStatGeo: 0, ripeStatNet: 0, ipApi: 0 });
+        return { ...cache };
+      case 'app.checkUpdate': {
+        await new Promise((r) => setTimeout(r, 500));
+        const fork = settings.updateRepo !== 'extraut/MTRTracer';
+        const tag = fork ? 'v1.2.0' : 'v1.1.1';
+        return {
+          repo: settings.updateRepo, current: '1.1.1', latest: tag, newerAvailable: fork, url: `https://github.com/${settings.updateRepo}/releases/tag/${tag}`,
+          publishedAt: new Date().toISOString(), notes: fork ? L('Демо: так выглядит найденное обновление.', 'Demo: this is what a found update looks like.') : null,
+          assets: [
+            { name: 'MTRTracer-windows-x64.exe', url: `https://github.com/${settings.updateRepo}/releases/download/${tag}/MTRTracer-windows-x64.exe`, size: 64_500_000 },
+            { name: 'mtrtracer-linux-x64.tar.gz', url: `https://github.com/${settings.updateRepo}/releases/download/${tag}/mtrtracer-linux-x64.tar.gz`, size: 34_100_000 },
+          ],
+          archived: false, error: null,
+        };
+      }
+      case 'shell.url':
+        window.open(String(p?.url), '_blank', 'noopener');
+        return null;
+      case 'file.pick':
+        throw { code: 'unsupported', message: L('В демо-режиме нет диалога выбора файла. Введите путь вручную.', 'No file dialog in demo mode. Enter the path manually.') };
+      case 'shell.open':
         return null;
       case 'geo.self':
         return originInfo();
@@ -666,7 +772,7 @@ export function createMockHost() {
   };
 
   setTimeout(() => {
-    emit('geo.status', { db: 'ready', progress: 1, stage: null, dbDate: '2026-10', error: null, online: true, onlineError: null });
+    emit('geo.status', { ...geo });
     emit('geo.origin', originInfo());
   }, 50);
 

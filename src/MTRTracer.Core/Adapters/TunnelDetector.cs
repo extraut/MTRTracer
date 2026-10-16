@@ -84,8 +84,8 @@ public static class TunnelDetector
         carrier ??= physical.FirstOrDefault();
 
         var explanation = carrier != null
-            ? $"Туннель «{tunnel.Name}» не имеет своего провода: зашифрованный трафик физически уходит через «{carrier.Name}». Поэтому счётчики {carrier.Name} всегда больше."
-            : $"Туннель «{tunnel.Name}»: физический адаптер не найден.";
+            ? Loc.S($"Туннель «{tunnel.Name}» не имеет своего провода: зашифрованный трафик физически уходит через «{carrier.Name}». Поэтому счётчики {carrier.Name} всегда больше.", $"Tunnel \"{tunnel.Name}\" has no wire of its own: its encrypted traffic physically leaves through \"{carrier.Name}\". That is why the {carrier.Name} counters are always higher.")
+            : Loc.S($"Туннель «{tunnel.Name}»: физический адаптер не найден.", $"Tunnel \"{tunnel.Name}\": physical adapter not found.");
 
         return new TunnelInfo(tunnel.Id, tunnel.Name, tunnel.IsWindowsChoice, owner.Info.Name, owner.Conns == null ? null : owner.Pid,
             owner.Info.Path, servers, carrier?.Id, carrier?.Name, carrier?.Ipv4.FirstOrDefault()?.Address, explanation);

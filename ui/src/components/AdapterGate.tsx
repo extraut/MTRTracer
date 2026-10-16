@@ -1,3 +1,4 @@
+import { L } from '../i18n';
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { request } from '../bridge/client';
@@ -9,15 +10,16 @@ import './adapters.css';
 
 const AUTO = '__auto__';
 
-const kindLabel: Record<string, string> = {
-  ethernet: 'Ethernet',
-  wifi: 'Wi-Fi',
-  vpn: 'VPN / туннель',
-  virtual: 'Виртуальный',
-  loopback: 'Loopback',
-  cellular: 'Мобильная сеть',
-  other: 'Другой',
-};
+const kindLabel = (k: string) =>
+  ({
+    ethernet: 'Ethernet',
+    wifi: 'Wi-Fi',
+    vpn: L('VPN / туннель', 'VPN / tunnel'),
+    virtual: L('Виртуальный', 'Virtual'),
+    loopback: 'Loopback',
+    cellular: L('Мобильная сеть', 'Cellular'),
+    other: L('Другой', 'Other'),
+  })[k] ?? k;
 
 function usable(a: AdapterInfo) {
   return a.status === 'up' && a.kind !== 'loopback' && (a.ipv4.length > 0 || a.ipv6.some((x) => !x.address.startsWith('fe80')));
@@ -101,22 +103,22 @@ function GatePanel() {
       >
         <header className="gate-head">
           <div>
-            <h1 id="gate-title">Через какой адаптер трассировать?</h1>
-            <p>Пакеты уйдут с адреса выбранного интерфейса. Так можно проверить маршрут мимо VPN или, наоборот, через туннель.</p>
+            <h1 id="gate-title">{L('Через какой адаптер трассировать?', 'Which adapter should the trace use?')}</h1>
+            <p>{L('Пакеты уйдут с адреса выбранного интерфейса. Так можно проверить маршрут мимо VPN или, наоборот, через туннель.', 'Packets leave from the address of the chosen interface. This way you can test the route around the VPN or, the other way round, through the tunnel.')}</p>
           </div>
           <div className="gate-head-actions">
-            <button className="btn ghost icon" onClick={() => reload()} title="Обновить список" aria-label="Обновить список">
+            <button className="btn ghost icon" onClick={() => reload()} title={L('Обновить список', 'Refresh list')} aria-label={L('Обновить список', 'Refresh list')}>
               <Restart size={15} className={loading ? 'spin' : ''} />
             </button>
             {hasSession && (
-              <button className="btn ghost icon" onClick={() => openGate(false)} title="Закрыть (Esc)" aria-label="Закрыть">
+              <button className="btn ghost icon" onClick={() => openGate(false)} title={L('Закрыть (Esc)', 'Close (Esc)')} aria-label={L('Закрыть', 'Close')}>
                 <Close size={15} />
               </button>
             )}
           </div>
         </header>
 
-        <div className="gate-list" role="listbox" aria-label="Сетевые адаптеры">
+        <div className="gate-list" role="listbox" aria-label={L('Сетевые адаптеры', 'Network adapters')}>
           <AutoRow selected={pick === AUTO} onPick={() => setPick(AUTO)} onConfirm={confirm} via={windowsChoice} />
           {loading && adapters.length === 0 && [0, 1, 2].map((i) => <div key={i} className="ad-skeleton" />)}
           {main.map((a) => (
@@ -125,7 +127,7 @@ function GatePanel() {
           {rest.length > 0 && (
             <button className="gate-more" onClick={() => setShowAll(!showAll)}>
               <ChevronRight size={13} className={showAll ? 'rot' : ''} />
-              {showAll ? 'Скрыть' : 'Показать'} отключённые и служебные ({rest.length})
+              {showAll ? L('Скрыть отключённые и служебные', 'Hide disconnected and system') : L('Показать отключённые и служебные', 'Show disconnected and system')} ({rest.length})
             </button>
           )}
           {showAll && rest.map((a) => <AdapterRow key={a.id} a={a} selected={pick === a.id} onPick={() => setPick(a.id)} onConfirm={confirm} disabled />)}
@@ -135,23 +137,23 @@ function GatePanel() {
           <div className="gate-vpn">
             <button className="toggle" role="switch" aria-checked={vpnMode} onClick={() => setVpnMode(!vpnMode)}>
               <span className="toggle-text">
-                <span>VPN-режим (рекомендуется для туннелей)</span>
+                <span>{L('VPN-режим (рекомендуется для туннелей)', 'VPN mode (recommended for tunnels)')}</span>
                 <span className="toggle-hint">
-                  Прокси-туннель не пропускает пакеты с TTL, пошаговая трассировка через него невозможна. В VPN-режиме видны настоящие хопы до сервера VPN
-                  {tunnel?.servers[0] ? ` (${tunnel.servers[0].ip}, ${tunnel.process ?? 'клиент'})` : ''} через {tunnel?.carrierName ?? 'физический адаптер'}, а дальше честная сквозная задержка до цели через туннель.
+                  {L('Прокси-туннель не пропускает пакеты с TTL, пошаговая трассировка через него невозможна. В VPN-режиме видны настоящие хопы до сервера VPN', 'A proxy tunnel does not pass packets with a TTL, so hop-by-hop tracing through it is impossible. VPN mode shows the real hops to the VPN server')}
+                  {tunnel?.servers[0] ? ` (${tunnel.servers[0].ip}, ${tunnel.process ?? L('клиент', 'client')})` : ''} {L('через', 'via')} {tunnel?.carrierName ?? L('физический адаптер', 'the physical adapter')}, {L('а дальше честная сквозная задержка до цели через туннель.', 'and then an honest end-to-end latency to the target through the tunnel.')}
                 </span>
               </span>
               <span className={`switch ${vpnMode ? 'on' : ''}`} />
             </button>
-            {!vpnMode && <div className="gate-vpn-warn">Без VPN-режима туннель, скорее всего, будет отвечать на пинг сам, и цифры будут ненастоящими.</div>}
+            {!vpnMode && <div className="gate-vpn-warn">{L('Без VPN-режима туннель, скорее всего, будет отвечать на пинг сам, и цифры будут ненастоящими.', 'Without VPN mode the tunnel will most likely answer pings itself and the numbers will not be real.')}</div>}
           </div>
         )}
         <footer className="gate-foot">
           <span className="gate-foot-hint">
-            <span className="kbd">↑</span> <span className="kbd">↓</span> выбор, <span className="kbd">Enter</span> подтвердить
+            <span className="kbd">↑</span> <span className="kbd">↓</span> {L('выбор', 'choose')}, <span className="kbd">Enter</span> {L('подтвердить', 'confirm')}
           </span>
           <button className="btn primary gate-ok" disabled={!canConfirm} onClick={confirm}>
-            {pick === AUTO ? 'Использовать авто' : `Использовать ${picked?.name ?? ''}`}
+            {pick === AUTO ? L('Использовать авто', 'Use auto') : `${L('Использовать', 'Use')} ${picked?.name ?? ''}`}
           </button>
         </footer>
       </motion.section>
@@ -168,17 +170,17 @@ function AutoRow({ selected, onPick, onConfirm, via }: { selected: boolean; onPi
       </span>
       <div className="ad-main">
         <div className="ad-title">
-          <span className="ad-name">Авто</span>
-          <span className="ad-desc">как решит таблица маршрутизации системы</span>
+          <span className="ad-name">{L('Авто', 'Auto')}</span>
+          <span className="ad-desc">{L('как решит таблица маршрутизации системы', 'as the system routing table decides')}</span>
         </div>
         <div className="ad-sub">
           {via ? (
             <>
-              сейчас трафик идёт через <b>{via.name}</b>
+              {L('сейчас трафик идёт через', 'traffic currently goes via')} <b>{via.name}</b>
               {via.kind === 'vpn' && <span className="badge warn">VPN</span>}
             </>
           ) : (
-            'маршрут по умолчанию не найден'
+            L('маршрут по умолчанию не найден', 'no default route found')
           )}
         </div>
       </div>
@@ -211,12 +213,12 @@ function AdapterRow({ a, selected, onPick, onConfirm, disabled }: { a: AdapterIn
           <span className="ad-desc">{a.description}</span>
         </div>
         <div className="ad-sub">
-          <span>{kindLabel[a.kind]}</span>
-          {a.isWindowsChoice && <span className="badge accent">Маршрут по умолчанию</span>}
-          {a.status !== 'up' && <span className="badge">{a.status === 'down' ? 'Отключён' : a.status}</span>}
-          {a.status === 'up' && !a.hasRoute && a.kind !== 'loopback' && <span className="badge warn">Нет выхода в интернет</span>}
+          <span>{kindLabel(a.kind)}</span>
+          {a.isWindowsChoice && <span className="badge accent">{L('Маршрут по умолчанию', 'Default route')}</span>}
+          {a.status !== 'up' && <span className="badge">{a.status === 'down' ? L('Отключён', 'Disconnected') : a.status}</span>}
+          {a.status === 'up' && !a.hasRoute && a.kind !== 'loopback' && <span className="badge warn">{L('Нет выхода в интернет', 'No internet route')}</span>}
           {tunnel?.process && <span className="badge">{tunnel.process}</span>}
-          {tunnel?.carrierName && <span className="ad-note">трафик идёт через {tunnel.carrierName}</span>}
+          {tunnel?.carrierName && <span className="ad-note">{L('трафик идёт через', 'traffic goes via')} {tunnel.carrierName}</span>}
         </div>
       </div>
       <div className="ad-addr">
@@ -238,21 +240,21 @@ function AdapterRow({ a, selected, onPick, onConfirm, disabled }: { a: AdapterIn
           >
             <Detail k="IPv4" v={v4.length ? a.ipv4.map((x) => `${x.address}/${x.prefix}`).join(', ') : null} mono />
             <Detail k="IPv6" v={v6.length ? v6.join(', ') : null} mono />
-            <Detail k="Шлюз" v={a.gateways.join(', ') || (a.isWindowsChoice ? 'нет (точка-точка)' : null)} mono />
+            <Detail k={L('Шлюз', 'Gateway')} v={a.gateways.join(', ') || (a.isWindowsChoice ? L('нет (точка-точка)', 'none (point-to-point)') : null)} mono />
             <Detail k="DNS" v={a.dns.join(', ') || null} mono />
             <Detail k="MAC" v={a.mac} mono />
-            <Detail k="Скорость" v={speed} />
+            <Detail k={L('Скорость', 'Speed')} v={speed} />
             <Detail k="MTU" v={a.mtu?.toString() ?? null} mono />
-            <Detail k="Адрес" v={a.dhcp ? 'DHCP' : 'статический'} />
+            <Detail k={L('Адрес', 'Address')} v={a.dhcp ? 'DHCP' : L('статический', 'static')} />
             {tunnel && (
               <div className="ad-warn info">
                 {tunnel.explanation}
-                {tunnel.servers.length > 0 && ` Сервер: ${tunnel.servers.map((x) => `${x.ip}:${x.port}`).slice(0, 3).join(', ')}.`}
+                {tunnel.servers.length > 0 && ` ${L('Сервер', 'Server')}: ${tunnel.servers.map((x) => `${x.ip}:${x.port}`).slice(0, 3).join(', ')}.`}
               </div>
             )}
             {!a.hasRoute && a.status === 'up' && a.kind !== 'loopback' && (
               <div className="ad-warn">
-                <Alert size={14} /> У адаптера нет маршрута в интернет: трассировка дальше локальной сети, скорее всего, не пройдёт.
+                <Alert size={14} /> {L('У адаптера нет маршрута в интернет: трассировка дальше локальной сети, скорее всего, не пройдёт.', 'The adapter has no route to the internet: the trace will most likely not get past the local network.')}
               </div>
             )}
           </motion.dl>

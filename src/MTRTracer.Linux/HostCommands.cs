@@ -55,7 +55,7 @@ public sealed class HostCommands(AppController controller, Action? close)
             case "clipboard.copy":
                 // Handled in the page; reaching here means navigator.clipboard was unavailable.
                 if (TryClipboard(Str(p, "text") ?? "")) return null;
-                throw new CommandException("clipboard", "Не удалось скопировать: установите wl-clipboard или xclip.");
+                throw new CommandException("clipboard", Loc.S("Не удалось скопировать: установите wl-clipboard или xclip.", "Could not copy: install wl-clipboard or xclip."));
 
             case "shell.open":
             {
@@ -63,7 +63,7 @@ public sealed class HostCommands(AppController controller, Action? close)
                 {
                     "sessions" => controller.SessionsDir,
                     "data" => controller.DataDir,
-                    _ => throw new CommandException("forbidden", "Можно открыть только папки приложения."),
+                    _ => throw new CommandException("forbidden", Loc.S("Можно открыть только папки приложения.", "Only the app's own folders can be opened.")),
                 };
                 Directory.CreateDirectory(path);
                 Open(path);
@@ -73,10 +73,34 @@ public sealed class HostCommands(AppController controller, Action? close)
             case "shell.reveal":
             {
                 var path = Str(p, "path");
-                if (path == null || !File.Exists(path)) throw new CommandException("forbidden", "Файл процесса не найден.");
+                if (path == null || !File.Exists(path)) throw new CommandException("forbidden", Loc.S("Файл процесса не найден.", "Process file not found."));
                 Open(Path.GetDirectoryName(path)!);
                 return null;
             }
+
+            case "shell.url":
+            {
+                // External links from the settings window (releases, forks, database pages). https only.
+                var url = Str(p, "url");
+                if (!ExternalLinks.IsAllowed(url)) throw new CommandException("forbidden", Loc.S("Эту ссылку открыть нельзя.", "This link cannot be opened."));
+                Open(url!);
+                return null;
+            }
+
+            case "file.pick":
+                // zenity (GNOME) or kdialog (KDE); without them the page asks for a path instead.
+                foreach (var (cmd, args) in new (string, string[])[]
+                         {
+                             ("zenity", ["--file-selection", "--title=MaxMind .mmdb", "--file-filter=*.mmdb *.gz *.tgz *.tar"]),
+                             ("kdialog", ["--getopenfilename", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "*.mmdb *.gz *.tgz *.tar"]),
+                         })
+                {
+                    if (!HasCommand(cmd)) continue;
+                    // Cancel exits non-zero, which Run reports as null.
+                    var r = await Task.Run(() => Core.Native.LinuxSystem.Run(cmd, args, 600_000));
+                    return new { path = string.IsNullOrWhiteSpace(r) ? null : r.Trim() };
+                }
+                throw new CommandException("unsupported", Loc.S("Нет диалога выбора файла (zenity/kdialog). Введите путь вручную.", "No file dialog available (zenity/kdialog). Enter the path manually."));
 
             case "process.icon":
                 return new { dataUrl = (string?)null };
@@ -90,7 +114,7 @@ public sealed class HostCommands(AppController controller, Action? close)
                 if (format == "clipboard")
                 {
                     if (TryClipboard(content)) return new { copied = true };
-                    throw new CommandException("clipboard", "Не удалось скопировать: установите wl-clipboard или xclip.");
+                    throw new CommandException("clipboard", Loc.S("Не удалось скопировать: установите wl-clipboard или xclip.", "Could not copy: install wl-clipboard or xclip."));
                 }
                 var dir = DownloadsDir();
                 Directory.CreateDirectory(dir);
@@ -103,6 +127,9 @@ public sealed class HostCommands(AppController controller, Action? close)
                 return await controller.HandleAsync(type, p);
         }
     }
+
+    private static bool HasCommand(string name) =>
+        (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':', StringSplitOptions.RemoveEmptyEntries).Any(d => File.Exists(Path.Combine(d, name)));
 
     private static string? Str(JsonElement p, string name) =>
         p.ValueKind == JsonValueKind.Object && p.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;

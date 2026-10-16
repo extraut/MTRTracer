@@ -2,7 +2,7 @@
   position: relative;
   height: 100%;
   min-height: 0;
-  background: #111217;
+  background: var(--map-ocean);
   overflow: hidden;
 }
 .map {
@@ -80,7 +80,7 @@
   max-width: 76%;
   padding: 6px 10px;
   border-radius: var(--radius);
-  background: oklch(0.17 0.006 265 / 0.86);
+  background: var(--glass);
   box-shadow: 0 0 0 1px var(--line-soft);
   color: var(--text-2);
   font-size: var(--fs-sm);
@@ -99,7 +99,7 @@
   gap: 2px;
   padding: 3px;
   border-radius: var(--radius);
-  background: oklch(0.17 0.006 265 / 0.86);
+  background: var(--glass);
   box-shadow: 0 0 0 1px var(--line-soft);
 }
 .map-ctl .btn {
@@ -157,7 +157,7 @@
 /* ---------- nodes (HTML markers) ---------- */
 
 .node {
-  --c: #57d29a;
+  --c: var(--lat-0);
   position: relative;
   width: 0;
   height: 0;
@@ -171,16 +171,16 @@
   height: 10px;
   border-radius: 50%;
   background: var(--c);
-  box-shadow: 0 0 0 2px #111217, 0 0 10px color-mix(in srgb, var(--c) 60%, transparent);
+  box-shadow: 0 0 0 2px var(--map-ocean), 0 0 10px color-mix(in srgb, var(--c) 60%, transparent);
   transition: transform var(--dur) var(--ease-out), background var(--dur-slow);
 }
 .node.s-single .node-dot {
   background: transparent;
-  box-shadow: inset 0 0 0 2px var(--c), 0 0 0 2px #111217;
+  box-shadow: inset 0 0 0 2px var(--c), 0 0 0 2px var(--map-ocean);
 }
 .node.s-anycast .node-dot {
   background: transparent;
-  box-shadow: 0 0 0 2px #111217;
+  box-shadow: 0 0 0 2px var(--map-ocean);
   border: 2px dashed var(--c);
 }
 .node.k-server .node-dot {
@@ -190,7 +190,7 @@
   height: 12px;
   border-radius: 3px;
   background: var(--c);
-  box-shadow: 0 0 0 3px #111217, 0 0 0 4px var(--accent-line);
+  box-shadow: 0 0 0 3px var(--map-ocean), 0 0 0 4px var(--accent-line);
 }
 .node.k-origin .node-dot {
   left: -6px;
@@ -198,14 +198,14 @@
   width: 12px;
   height: 12px;
   background: var(--c);
-  box-shadow: 0 0 0 3px #111217, 0 0 0 5px color-mix(in srgb, var(--c) 40%, transparent);
+  box-shadow: 0 0 0 3px var(--map-ocean), 0 0 0 5px color-mix(in srgb, var(--c) 40%, transparent);
 }
 .node.dest .node-dot {
   left: -7px;
   top: -7px;
   width: 14px;
   height: 14px;
-  box-shadow: 0 0 0 3px #111217, 0 0 0 5px var(--c), 0 0 18px var(--c);
+  box-shadow: 0 0 0 3px var(--map-ocean), 0 0 0 5px var(--c), 0 0 18px var(--c);
 }
 .node-ring {
   position: absolute;
@@ -233,7 +233,7 @@
   flex-direction: column;
   padding: 3px 7px;
   border-radius: 5px;
-  background: oklch(0.17 0.006 265 / 0.92);
+  background: color-mix(in oklab, var(--bg) 94%, transparent);
   box-shadow: 0 0 0 1px var(--line);
   white-space: nowrap;
   max-width: 280px;
@@ -280,5 +280,5 @@
 
 .node.s-unresolved .node-dot {
   background: transparent;
-  box-shadow: inset 0 0 0 2px var(--c), 0 0 0 2px #111217, 0 0 0 4px oklch(0.83 0.145 88 / 0.45);
+  box-shadow: inset 0 0 0 2px var(--c), 0 0 0 2px var(--map-ocean), 0 0 0 4px color-mix(in oklab, var(--warn) 45%, transparent);
 }

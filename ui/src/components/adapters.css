@@ -16,7 +16,7 @@
   flex-direction: column;
   background: var(--bg-raised);
   border-radius: 12px;
-  box-shadow: 0 24px 64px oklch(0.06 0.01 265 / 0.6), 0 0 0 1px var(--line);
+  box-shadow: var(--shadow-modal);
   overflow: hidden;
 }
 

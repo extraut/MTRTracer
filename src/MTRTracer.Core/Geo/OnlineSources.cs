@@ -136,6 +136,14 @@ public sealed class DiskCache
             catch { }
         });
     }
+
+    public int Count => _items.Count;
+
+    public void Clear()
+    {
+        _items.Clear();
+        try { File.Delete(_path); } catch { }
+    }
 }
 
 public sealed class CloudflareMeta

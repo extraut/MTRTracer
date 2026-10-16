@@ -202,6 +202,28 @@ export const Bolt = (p: P) => (
   </I>
 );
 
+export const Gear = (p: P) => (
+  <I {...p}>
+    <circle cx="8" cy="8" r="2.1" />
+    <path d="M8 1.6v1.6M8 12.8v1.6M14.4 8h-1.6M3.2 8H1.6M12.53 3.47l-1.13 1.13M4.6 11.4l-1.13 1.13M12.53 12.53 11.4 11.4M4.6 4.6 3.47 3.47" />
+    <circle cx="8" cy="8" r="4.6" />
+  </I>
+);
+export const Download = (p: P) => (
+  <I {...p}>
+    <path d="M8 2.5v8M4.8 7.5 8 10.7l3.2-3.2M3 13.5h10" />
+  </I>
+);
+export const Trash = (p: P) => (
+  <I {...p}>
+    <path d="M3 4.5h10M6.5 4.5V3h3v1.5M4.5 4.5l.6 8.3c.05.68.6 1.2 1.3 1.2h3.2c.7 0 1.25-.52 1.3-1.2l.6-8.3" />
+  </I>
+);
+export const External = (p: P) => (
+  <I {...p}>
+    <path d="M9.5 2.5h4v4M13.5 2.5 7.5 8.5M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3" />
+  </I>
+);
 export function AdapterIcon({ kind, ...p }: P & { kind: string }) {
   switch (kind) {
     case 'ethernet':

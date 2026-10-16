@@ -98,7 +98,7 @@ public sealed class ResolverService
                     var r = await MiniDnsClient.QueryAsync(server, host, type, 2500, ct);
                     var list = r.Addresses.Select(AdaptersFormat).ToList();
                     attempts.Add(new ResolveAttempt(server.ToString(), via, r.ElapsedMs, r.Ok && list.Count > 0,
-                        r.Ok ? (list.Count == 0 ? $"нет записей {type}" : null) : RCodeText(r.RCode), list));
+                        r.Ok ? (list.Count == 0 ? Loc.S($"нет записей {type}", $"no {type} records") : null) : RCodeText(r.RCode), list));
                     var chosen = Pick(r.Addresses);
                     if (chosen != null)
                         return new ResolveResult(input, host, chosen, list, via, r.ElapsedMs, attempts);
@@ -207,7 +207,7 @@ public sealed class ResolverService
     {
         1 => "FORMERR",
         2 => "SERVFAIL",
-        3 => "NXDOMAIN: домен не существует",
+        3 => Loc.S("NXDOMAIN: домен не существует", "NXDOMAIN: the domain does not exist"),
         4 => "NOTIMP",
         5 => "REFUSED",
         _ => $"RCODE {rcode}",
@@ -217,12 +217,12 @@ public sealed class ResolverService
     {
         SocketException se => se.SocketErrorCode switch
         {
-            SocketError.HostNotFound => "домен не найден",
-            SocketError.TryAgain => "временная ошибка DNS",
-            SocketError.NoData => "нет адресов",
+            SocketError.HostNotFound => Loc.S("домен не найден", "domain not found"),
+            SocketError.TryAgain => Loc.S("временная ошибка DNS", "temporary DNS failure"),
+            SocketError.NoData => Loc.S("нет адресов", "no addresses"),
             _ => se.SocketErrorCode.ToString(),
         },
-        TimeoutException or OperationCanceledException => "таймаут",
+        TimeoutException or OperationCanceledException => Loc.S("таймаут", "timeout"),
         _ => e.Message,
     };
 }

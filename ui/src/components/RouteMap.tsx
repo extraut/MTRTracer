@@ -1,3 +1,5 @@
+import { L, plural } from '../i18n';
+import { palette } from '../theme';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import maplibregl, { type GeoJSONSource, type Map as MLMap, type StyleSpecification } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -8,7 +10,7 @@ import world110 from 'world-atlas/countries-110m.json';
 import type { Hop, HostInfo, RouteGeo, VpnBlock } from '../bridge/protocol';
 import { useStore } from '../store';
 import { distanceKm, facing, greatCircle } from '../lib/geodesy';
-import { km, latencyColorHex, latencyHex, ms, plural } from '../lib/format';
+import { km, latencyColorHex, latencyHex, ms } from '../lib/format';
 import { Crosshair, Globe, Layers, MapIcon } from './Icons';
 import './map.css';
 
@@ -22,9 +24,10 @@ function countries(topo: unknown): FeatureCollection {
 const land50 = countries(world50);
 const land110 = countries(world110);
 
-const C = { ocean: '#111217', land: '#1d1f26', border: '#2d303a', accent: '#9b9cf0', lost: '#ec5d55', gap: '#6b6f80' };
+/** Theme colours resolved for MapLibre and canvas (the map remounts when the theme changes). */
+const C = palette;
 
-const offlineStyle: StyleSpecification = {
+const offlineStyle = (): StyleSpecification => ({
   version: 8,
   name: 'mtr-offline',
   sources: { land110: { type: 'geojson', data: land110 }, land50: { type: 'geojson', data: land50 } },
@@ -35,8 +38,9 @@ const offlineStyle: StyleSpecification = {
     { id: 'borders-lo', type: 'line', source: 'land110', maxzoom: 3, paint: { 'line-color': C.border, 'line-width': 0.5 } },
     { id: 'borders-hi', type: 'line', source: 'land50', minzoom: 3, paint: { 'line-color': C.border, 'line-width': ['interpolate', ['linear'], ['zoom'], 3, 0.6, 7, 1.2] } },
   ],
-};
-const onlineStyleUrl = 'https://tiles.openfreemap.org/styles/dark';
+});
+/** OpenFreeMap has no dark/light switch per request: light themes get the "positron" style. */
+const onlineStyleUrl = () => `https://tiles.openfreemap.org/styles/${palette.dark ? 'dark' : 'positron'}`;
 const empty: FeatureCollection = { type: 'FeatureCollection', features: [] };
 
 type NodeKind = 'origin' | 'hop' | 'server' | 'target';
@@ -71,7 +75,7 @@ function buildNodes(geo: RouteGeo | null, hops: Hop[], hosts: Record<string, Hos
   if (!geo) return { nodes, gaps };
   if (geo.origin) {
     nodes.push({
-      key: 'origin', kind: 'origin', ttls: [], ip: null, lon: geo.origin.lon, lat: geo.origin.lat, label: 'Вы',
+      key: 'origin', kind: 'origin', ttls: [], ip: null, lon: geo.origin.lon, lat: geo.origin.lat, label: L('Вы', 'You'),
       sub: geo.origin.label ?? '', status: 'confirmed', isDest: false, loss: 0, avg: null,
     });
   }
@@ -116,7 +120,7 @@ function buildNodes(geo: RouteGeo | null, hops: Hop[], hosts: Record<string, Hos
     if (server && server.kind !== 'origin') {
       server.kind = 'server';
       server.isDest = false;
-      server.label = `Сервер VPN · ${server.ip}`;
+      server.label = `${L('Сервер VPN', 'VPN server')} · ${server.ip}`;
     }
     const t = vpn.targetGeo;
     if (t && t.lat != null && t.lon != null) {
@@ -171,7 +175,7 @@ export function RouteMap() {
   useEffect(() => {
     const map = new maplibregl.Map({
       container: box.current!,
-      style: offlineStyle,
+      style: offlineStyle(),
       center: [30, 52],
       zoom: 2.2,
       attributionControl: false,
@@ -227,7 +231,7 @@ export function RouteMap() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    map.setStyle(detail ? onlineStyleUrl : offlineStyle, { diff: false });
+    map.setStyle(detail ? onlineStyleUrl() : offlineStyle(), { diff: false });
   }, [detail]);
 
   useEffect(() => {
@@ -368,7 +372,7 @@ export function RouteMap() {
       const head = Math.floor(easeOut(f) * (s.coords.length - 1));
       ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
-      ctx.strokeStyle = `rgba(230,230,255,${0.9 * (1 - f)})`;
+      ctx.strokeStyle = `rgba(${C.ring},${0.9 * (1 - f)})`;
       ctx.beginPath();
       let started = false;
       for (let i = Math.max(0, head - 10); i <= head; i++) {
@@ -397,7 +401,7 @@ export function RouteMap() {
         if (q < 0) continue;
         pts.push(proj(pointOnRoute(segs, k.marks, q)));
       }
-      const color = k.lost && p > end ? '236,93,85' : '210,211,255';
+      const color = k.lost && p > end ? C.lostRgb : C.comet;
       for (let i = 1; i < pts.length; i++) {
         const a = pts[i - 1];
         const b = pts[i];
@@ -415,7 +419,7 @@ export function RouteMap() {
         ctx.beginPath();
         ctx.arc(headPt[0], headPt[1], 7, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = `rgba(${k.lost && p >= end ? '236,93,85' : '238,238,255'},${fade})`;
+        ctx.fillStyle = `rgba(${k.lost && p >= end ? C.lostRgb : C.comet},${fade})`;
         ctx.beginPath();
         ctx.arc(headPt[0], headPt[1], 3.4, 0, Math.PI * 2);
         ctx.fill();
@@ -457,12 +461,12 @@ export function RouteMap() {
       m.marker.setLngLat([n.lon, n.lat]);
       el.dataset.ttls = n.ttls.join(',');
       el.className = `node k-${n.kind} s-${n.status}${n.isDest ? ' dest' : ''}${n.loss >= 5 ? ' lossy' : ''}`;
-      el.style.setProperty('--c', n.kind === 'origin' ? C.accent : n.kind === 'server' ? '#c6c7ff' : n.loss >= 20 ? C.lost : latencyColorHex(n.avg));
+      el.style.setProperty('--c', n.kind === 'origin' ? C.accent : n.kind === 'server' ? C.server : n.loss >= 20 ? C.lost : latencyColorHex(n.avg));
       const ttlText = n.ttls.length === 0 ? '' : `${n.ttls.length > 1 ? `${n.ttls[0]}–${n.ttls[n.ttls.length - 1]}` : n.ttls[0]} · `;
-      el.querySelector('.node-label b')!.textContent = n.kind === 'origin' ? 'Вы' : `${n.kind === 'hop' ? ttlText : ''}${n.label}`;
+      el.querySelector('.node-label b')!.textContent = n.kind === 'origin' ? L('Вы', 'You') : `${n.kind === 'hop' ? ttlText : ''}${n.label}`;
       const statusText = n.status === 'anycast' ? 'anycast · ' : n.status === 'single' ? '≈ ' : n.status === 'unresolved' ? '? ' : '';
       el.querySelector('.node-label i')!.textContent =
-        n.kind === 'origin' ? n.sub : `${statusText}${n.sub}${n.avg != null ? ` · ${ms(n.avg)} мс` : ''}${n.loss > 0 ? ` · ${n.loss}%` : ''}`;
+        n.kind === 'origin' ? n.sub : `${statusText}${n.sub}${n.avg != null ? ` · ${ms(n.avg)} ${L('мс', 'ms')}` : ''}${n.loss > 0 ? ` · ${n.loss}%` : ''}`;
       const lastTtl = n.ttls[n.ttls.length - 1];
       const recv = n.kind === 'target' ? (st.vpn?.recv ?? 0) : (st.hops.find((h) => h.ttl === lastTtl)?.recv ?? 0);
       if (recv !== m.lastRecv && m.lastRecv >= 0) {
@@ -491,26 +495,26 @@ export function RouteMap() {
       <div className="map-top">
         <div className="map-summary">
           {!geo || hops.length === 0 ? (
-            <span className="muted">{hops.length ? 'Определяем местоположение узлов…' : 'Маршрут появится здесь'}</span>
+            <span className="muted">{hops.length ? L('Определяем местоположение узлов…', 'Locating routers…') : L('Маршрут появится здесь', 'The route will appear here')}</span>
           ) : (
             <>
               <span>
-                <b className="num">{placed}</b> {plural(placed, 'точка', 'точки', 'точек')}
+                <b className="num">{placed}</b> {plural(placed, ['точка', 'точки', 'точек'], ['point', 'points'])}
               </span>
               {summary && summary.pathKm > 0 && (
                 <>
                   <span className="sep" />
-                  <span title="Сумма длин участков между подтверждёнными точками">
-                    путь <b className="num">{km(summary.pathKm)}</b>
+                  <span title={L('Сумма длин участков между подтверждёнными точками', 'Sum of the segment lengths between confirmed points')}>
+                    {L('путь', 'path')} <b className="num">{km(summary.pathKm)}</b>
                   </span>
                 </>
               )}
               {summary?.directKm != null && summary.minRttMs != null && summary.directKm > 50 && (
                 <>
                   <span className="sep" />
-                  <span title="Минимальный RTT по прямой при скорости света в оптоволокне (~200 000 км/с)">
-                    по прямой {km(summary.directKm)}: минимум <b className="num">{ms(summary.minRttMs)}</b>, измерено{' '}
-                    <b className="num">{ms(summary.measuredMs)}</b> мс
+                  <span title={L('Минимальный RTT по прямой при скорости света в оптоволокне (~200 000 км/с)', 'Minimum RTT in a straight line at the speed of light in fibre (~200,000 km/s)')}>
+                    {L('по прямой', 'straight line')} {km(summary.directKm)}: {L('минимум', 'minimum')} <b className="num">{ms(summary.minRttMs)}</b>, {L('измерено', 'measured')}{' '}
+                    <b className="num">{ms(summary.measuredMs)}</b> {L('мс', 'ms')}
                     {summary.stretch != null && <span className="muted"> (×{summary.stretch.toFixed(1)})</span>}
                   </span>
                 </>
@@ -518,8 +522,8 @@ export function RouteMap() {
               {summary && summary.unresolved > 0 && (
                 <>
                   <span className="sep" />
-                  <span className="warn-text" title="Место этих узлов по данным источников не сходится с измеренной задержкой. Они всё равно показаны на карте, с пометкой «?»">
-                    {summary.unresolved} {plural(summary.unresolved, 'узел', 'узла', 'узлов')} {summary.unresolved === 1 ? 'не сходится' : 'не сходятся'} с RTT
+                  <span className="warn-text" title={L('Место этих узлов по данным источников не сходится с измеренной задержкой. Они всё равно показаны на карте, с пометкой «?»', 'The sources put these routers where the measured latency cannot reach. They are still shown on the map, marked with "?"')}>
+                    {summary.unresolved} {plural(summary.unresolved, ['узел', 'узла', 'узлов'], ['router', 'routers'])} {summary.unresolved === 1 ? L('не сходится с RTT', 'does not match RTT') : L('не сходятся с RTT', 'do not match RTT')}
                   </span>
                 </>
               )}
@@ -527,7 +531,7 @@ export function RouteMap() {
                 <>
                   <span className="sep" />
                   <span>
-                    через VPN{vpn.exit?.city ? `, выход: ${vpn.exit.city}` : ''}
+                    {L('через VPN', 'via VPN')}{vpn.exit?.city ? `, ${L('выход', 'exit')}: ${vpn.exit.city}` : ''}
                     {vpn.exit?.colo ? ` (Cloudflare ${vpn.exit.colo})` : ''}
                   </span>
                 </>
@@ -536,13 +540,13 @@ export function RouteMap() {
           )}
         </div>
         <div className="map-ctl">
-          <button className={`btn sm ${projection === 'mercator' ? 'active' : ''}`} onClick={() => setUi({ projection: 'mercator' })} title="Плоская карта">
+          <button className={`btn sm ${projection === 'mercator' ? 'active' : ''}`} onClick={() => setUi({ projection: 'mercator' })} title={L('Плоская карта', 'Flat map')}>
             <MapIcon size={14} />
           </button>
-          <button className={`btn sm ${projection === 'globe' ? 'active' : ''}`} onClick={() => setUi({ projection: 'globe' })} title="Глобус">
+          <button className={`btn sm ${projection === 'globe' ? 'active' : ''}`} onClick={() => setUi({ projection: 'globe' })} title={L('Глобус', 'Globe')}>
             <Globe size={14} />
           </button>
-          <button className={`btn sm ${detail ? 'active' : ''}`} onClick={() => setUi({ mapDetail: !detail })} title="Подробная подложка (онлайн, OpenFreeMap)">
+          <button className={`btn sm ${detail ? 'active' : ''}`} onClick={() => setUi({ mapDetail: !detail })} title={L('Подробная подложка (онлайн, OpenFreeMap)', 'Detailed base map (online, OpenFreeMap)')}>
             <Layers size={14} />
           </button>
           <button
@@ -551,7 +555,7 @@ export function RouteMap() {
               userMoved.current = false;
               if (mapRef.current) fitTo(mapRef.current, nodes, 700);
             }}
-            title="Показать весь маршрут"
+            title={L('Показать весь маршрут', 'Show the whole route')}
             disabled={nodes.length === 0}
           >
             <Crosshair size={14} />
@@ -560,35 +564,35 @@ export function RouteMap() {
       </div>
       <div className="map-bottom">
         <div className="legends">
-          <div className="legend" aria-label="Шкала задержки">
+          <div className="legend" aria-label={L('Шкала задержки', 'Latency scale')}>
             {latencyHex.map((c, i) => (
-              <span key={c} style={{ background: c }} title={['< 30 мс', '30–60 мс', '60–100 мс', '100–180 мс', '> 180 мс'][i]} />
+              <span key={c} style={{ background: c }} title={['< 30', '30–60', '60–100', '100–180', '> 180'][i] + ' ' + L('мс', 'ms')} />
             ))}
             <em>0</em>
             <em>30</em>
             <em>60</em>
             <em>100</em>
-            <em>180+ мс</em>
+            <em>180+ {L('мс', 'ms')}</em>
           </div>
           <div className="legend-conf">
             <span>
-              <i className="lc confirmed" /> подтверждено
+              <i className="lc confirmed" /> {L('подтверждено', 'confirmed')}
             </span>
             <span>
-              <i className="lc single" /> один источник
+              <i className="lc single" /> {L('один источник', 'single source')}
             </span>
             <span>
               <i className="lc anycast" /> anycast
             </span>
             <span>
-              <i className="lc unresolved" /> не сходится с RTT
+              <i className="lc unresolved" /> {L('не сходится с RTT', 'does not match RTT')}
             </span>
           </div>
         </div>
         <div className="attrib">
-          {dbBusy && <span className="geo-dl">Загрузка гео-базы {Math.round((geoStatus!.progress ?? 0) * 100)}%</span>}
+          {dbBusy && <span className="geo-dl">{L('Загрузка гео-базы', 'Downloading geo DB')} {Math.round((geoStatus!.progress ?? 0) * 100)}%</span>}
           {detail ? '© OpenFreeMap © OpenMapTiles © OSM · ' : '© Natural Earth · '}
-          геоданные: RIPE IPmap, MaxMind GeoLite, DB-IP, Cloudflare
+          {L('геоданные', 'geo data')}: RIPE IPmap, MaxMind GeoLite, DB-IP, Cloudflare
         </div>
       </div>
     </div>

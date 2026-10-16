@@ -1,9 +1,13 @@
 /* MTRTracer design tokens.
    Scene: someone diagnosing lag or a flaky VPN in the evening, the window open for an hour beside a game
    or a terminal, glancing between numbers and the map. Dark graphite ground with a faint blue cast;
-   one restrained periwinkle accent for selection and primary action; chroma reserved for latency/loss data. */
+   one restrained periwinkle accent for selection and primary action; chroma reserved for latency/loss data.
 
-:root {
+   Themes swap only the base colours below (data-theme on <html>); everything derived — soft fills, lines,
+   glass panels — is computed from them, so every theme stays internally consistent. */
+
+:root,
+:root[data-theme='dark'] {
   color-scheme: dark;
 
   /* Neutrals: tinted toward the accent hue (265). */
@@ -12,6 +16,7 @@
   --bg-sunken: oklch(0.158 0.006 265);
   --bg-hover: oklch(0.235 0.008 265);
   --bg-active: oklch(0.265 0.01 265);
+  --bg-pop: oklch(0.215 0.008 265);
   --bg-overlay: oklch(0.12 0.006 265 / 0.72);
   --line: oklch(0.285 0.009 265);
   --line-soft: oklch(0.24 0.008 265);
@@ -24,23 +29,160 @@
 
   --accent: oklch(0.76 0.115 272);
   --accent-strong: oklch(0.7 0.14 272);
+  --accent-hover: oklch(0.8 0.11 272);
   --accent-ink: oklch(0.2 0.04 272);
-  --accent-soft: oklch(0.76 0.115 272 / 0.14);
-  --accent-line: oklch(0.76 0.115 272 / 0.45);
 
-  /* Data scale: latency good -> bad, loss. */
+  /* Data scale: latency good -> bad. */
   --lat-0: oklch(0.8 0.135 160);
   --lat-1: oklch(0.85 0.14 125);
   --lat-2: oklch(0.83 0.145 88);
   --lat-3: oklch(0.74 0.16 55);
   --lat-4: oklch(0.67 0.19 27);
 
+  /* Map */
+  --map-ocean: #111217;
+  --map-land: #1d1f26;
+  --map-border: #2d303a;
+  --map-server: #c6c7ff;
+  --map-comet: #eeeeff;
+
+  --shadow-color: oklch(0.08 0.01 265 / 0.55);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --bg: oklch(0.985 0.002 265);
+  --bg-raised: oklch(1 0 0);
+  --bg-sunken: oklch(0.962 0.004 265);
+  --bg-hover: oklch(0.948 0.006 265);
+  --bg-active: oklch(0.922 0.01 265);
+  --bg-pop: oklch(1 0 0);
+  --bg-overlay: oklch(0.32 0.01 265 / 0.32);
+  --line: oklch(0.885 0.007 265);
+  --line-soft: oklch(0.925 0.005 265);
+  --line-strong: oklch(0.8 0.01 265);
+
+  --text: oklch(0.22 0.012 265);
+  --text-2: oklch(0.4 0.014 265);
+  --text-3: oklch(0.53 0.014 265);
+  --text-4: oklch(0.66 0.012 265);
+
+  --accent: oklch(0.52 0.17 272);
+  --accent-strong: oklch(0.46 0.18 272);
+  --accent-hover: oklch(0.57 0.16 272);
+  --accent-ink: oklch(0.985 0.01 272);
+
+  --lat-0: oklch(0.6 0.14 160);
+  --lat-1: oklch(0.63 0.15 128);
+  --lat-2: oklch(0.68 0.15 80);
+  --lat-3: oklch(0.63 0.17 50);
+  --lat-4: oklch(0.57 0.2 27);
+
+  --map-ocean: #dfe5ee;
+  --map-land: #f7f8fa;
+  --map-border: #c3c9d4;
+  --map-server: #5154c9;
+  --map-comet: #3a3d8f;
+
+  --shadow-color: oklch(0.3 0.02 265 / 0.18);
+}
+
+/* Catppuccin Mocha (catppuccin.com, MIT). */
+:root[data-theme='mocha'] {
+  color-scheme: dark;
+
+  --bg: #1e1e2e;
+  --bg-raised: #24243a;
+  --bg-sunken: #181825;
+  --bg-hover: #2a2b3d;
+  --bg-active: #313244;
+  --bg-pop: #262739;
+  --bg-overlay: rgb(17 17 27 / 0.72);
+  --line: #313244;
+  --line-soft: #2a2b3c;
+  --line-strong: #45475a;
+
+  --text: #cdd6f4;
+  --text-2: #bac2de;
+  --text-3: #9399b2;
+  --text-4: #6c7086;
+
+  --accent: #cba6f7;
+  --accent-strong: #b98ef2;
+  --accent-hover: #d6b8f9;
+  --accent-ink: #1e1e2e;
+
+  --lat-0: #94e2d5;
+  --lat-1: #a6e3a1;
+  --lat-2: #f9e2af;
+  --lat-3: #fab387;
+  --lat-4: #f38ba8;
+
+  --map-ocean: #11111b;
+  --map-land: #1e1e2e;
+  --map-border: #313244;
+  --map-server: #b4befe;
+  --map-comet: #f5e0dc;
+
+  --shadow-color: rgb(17 17 27 / 0.6);
+}
+
+/* Nord (nordtheme.com, MIT). */
+:root[data-theme='nord'] {
+  color-scheme: dark;
+
+  --bg: #2e3440;
+  --bg-raised: #343b48;
+  --bg-sunken: #292e39;
+  --bg-hover: #3b4252;
+  --bg-active: #434c5e;
+  --bg-pop: #363d4a;
+  --bg-overlay: rgb(36 41 51 / 0.72);
+  --line: #3b4252;
+  --line-soft: #353c49;
+  --line-strong: #4c566a;
+
+  --text: #eceff4;
+  --text-2: #d8dee9;
+  --text-3: #a5adbb;
+  --text-4: #7b8496;
+
+  --accent: #88c0d0;
+  --accent-strong: #81a1c1;
+  --accent-hover: #9ccdda;
+  --accent-ink: #2e3440;
+
+  --lat-0: #8fbcbb;
+  --lat-1: #a3be8c;
+  --lat-2: #ebcb8b;
+  --lat-3: #d08770;
+  --lat-4: #bf616a;
+
+  --map-ocean: #242933;
+  --map-land: #2e3440;
+  --map-border: #434c5e;
+  --map-server: #b48ead;
+  --map-comet: #eceff4;
+
+  --shadow-color: rgb(29 33 41 / 0.6);
+}
+
+:root {
+  /* Derived from the theme colours above. */
+  --accent-soft: color-mix(in oklab, var(--accent) 14%, transparent);
+  --accent-line: color-mix(in oklab, var(--accent) 45%, transparent);
+
   --ok: var(--lat-0);
   --warn: var(--lat-2);
   --bad: var(--lat-4);
-  --ok-soft: oklch(0.8 0.135 160 / 0.12);
-  --warn-soft: oklch(0.83 0.145 88 / 0.12);
-  --bad-soft: oklch(0.67 0.19 27 / 0.14);
+  --ok-soft: color-mix(in oklab, var(--lat-0) 12%, transparent);
+  --warn-soft: color-mix(in oklab, var(--lat-2) 12%, transparent);
+  --bad-soft: color-mix(in oklab, var(--lat-4) 14%, transparent);
+
+  --glass: color-mix(in oklab, var(--bg) 88%, transparent);
+  --scroll-thumb: color-mix(in oklab, var(--line-strong) 70%, transparent);
+  --scroll-thumb-hover: color-mix(in oklab, var(--text-4) 85%, transparent);
 
   /* Type */
   --font-ui: 'Geist Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
@@ -75,5 +217,6 @@
   --statusbar-h: 26px;
   --row-h: 32px;
 
-  --shadow-pop: 0 12px 32px oklch(0.08 0.01 265 / 0.55), 0 0 0 1px var(--line);
+  --shadow-pop: 0 12px 32px var(--shadow-color), 0 0 0 1px var(--line);
+  --shadow-modal: 0 24px 64px var(--shadow-color), 0 0 0 1px var(--line);
 }

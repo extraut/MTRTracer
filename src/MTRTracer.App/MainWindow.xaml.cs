@@ -31,11 +31,13 @@ public partial class MainWindow : Window
 
     private async Task InitAsync()
     {
+        Loc.Language = AppController.PeekLanguage(App.DataDir);
         string? version = null;
         try { version = CoreWebView2Environment.GetAvailableBrowserVersionString(); } catch { }
         if (version == null)
         {
-            ShowFallback("Для работы интерфейса нужен Microsoft Edge WebView2 Runtime. Он встроен в Windows 11 и большинство Windows 10; установите его и перезапустите программу.");
+            ShowFallback(Loc.S("Для работы интерфейса нужен Microsoft Edge WebView2 Runtime. Он встроен в Windows 11 и большинство Windows 10; установите его и перезапустите программу.",
+                "The interface needs the Microsoft Edge WebView2 Runtime. It ships with Windows 11 and most Windows 10 installs; install it and restart the program."));
             return;
         }
 
@@ -48,7 +50,7 @@ public partial class MainWindow : Window
         catch (Exception e)
         {
             App.LogError(e);
-            ShowFallback("Не удалось запустить WebView2: " + e.Message);
+            ShowFallback(Loc.S("Не удалось запустить WebView2: ", "Could not start WebView2: ") + e.Message);
             return;
         }
 
@@ -96,7 +98,8 @@ public partial class MainWindow : Window
             var root = UiAssets.Extract(App.DataDir);
             if (!File.Exists(Path.Combine(root, "index.html")))
             {
-                ShowFallback("Интерфейс не встроен в программу: перед сборкой нужно собрать папку ui (npm run build). Запустите build.ps1, он сделает всё по порядку.");
+                ShowFallback(Loc.S("Интерфейс не встроен в программу: перед сборкой нужно собрать папку ui (npm run build). Запустите build.ps1, он сделает всё по порядку.",
+                    "The interface is not embedded: build the ui folder first (npm run build). Run build.ps1, it does everything in order."));
                 return;
             }
             core.SetVirtualHostNameToFolderMapping(Host, root, CoreWebView2HostResourceAccessKind.Allow);
@@ -115,6 +118,8 @@ public partial class MainWindow : Window
         Web.Visibility = Visibility.Collapsed;
         Fallback.Visibility = Visibility.Visible;
         FallbackText.Text = text;
+        FallbackLink.Content = Loc.S("Скачать WebView2 Runtime", "Download WebView2 Runtime");
+        FallbackClose.Content = Loc.S("Закрыть", "Close");
     }
 
     private void OnInstallRuntime(object sender, RoutedEventArgs e) =>

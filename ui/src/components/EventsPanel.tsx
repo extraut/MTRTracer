@@ -1,3 +1,4 @@
+import { L } from '../i18n';
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { clock } from '../lib/format';
@@ -15,7 +16,7 @@ export function EventsPanel() {
   return (
     <div className="panel events" ref={ref}>
       {events.length === 0 ? (
-        <div className="empty">Смена маршрута, серии потерь, обрывы сети, переход на TCP-пинг и другие события сессии появятся здесь с точным временем.</div>
+        <div className="empty">{L('Смена маршрута, серии потерь, обрывы сети, переход на TCP-пинг и другие события сессии появятся здесь с точным временем.', 'Route changes, loss bursts, network drops, the switch to TCP ping and other session events show up here with exact times.')}</div>
       ) : (
         events.map((e, i) => (
           <div key={i} className={`ev ${e.level}`}>
@@ -24,7 +25,7 @@ export function EventsPanel() {
             <span className="ev-msg selectable">{e.message}</span>
             {e.ttl != null && e.ttl > 0 && (
               <button className="badge ev-ttl" onClick={() => setSelected(e.ttl)}>
-                хоп {e.ttl}
+                {L('хоп', 'hop')} {e.ttl}
               </button>
             )}
           </div>
