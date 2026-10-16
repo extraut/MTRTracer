@@ -118,10 +118,12 @@ jobs:
       - uses: actions/download-artifact@v5
         with:
           path: assets
+          pattern: '*64'   # windows-x64, linux-x64, linux-arm64 (not the internal ui-dist)
           merge-multiple: true
       - name: Checksums
         working-directory: assets
         run: |
+          ls -la
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
       - name: Create release
