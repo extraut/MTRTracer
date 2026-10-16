@@ -1,0 +1,133 @@
+name: Release
+
+# Builds Windows and Linux binaries on GitHub-hosted runners and publishes them to a release.
+# Triggered by pushing a version tag (v1.2.3). Release builds carry no .pdb / debug info
+# (see Directory.Build.props) and the workflow fails if any slips into the output.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: '1'
+
+jobs:
+  ui:
+    name: UI (React)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - run: npm ci
+        working-directory: ui
+      - run: npm run build
+        working-directory: ui
+      - uses: actions/upload-artifact@v5
+        with:
+          name: ui-dist
+          path: ui/dist
+          retention-days: 1
+
+  windows:
+    name: Windows x64
+    needs: ui
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v5
+        with:
+          name: ui-dist
+          path: ui/dist
+      - name: Unit tests (offline)
+        run: dotnet test src/MTRTracer.Tests -c Release
+      - name: Publish
+        shell: pwsh
+        run: |
+          dotnet publish src/MTRTracer.App -c Release -r win-x64 -o out --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
+            -p:DebugType=none -p:DebugSymbols=false
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          Get-ChildItem out
+          if (Get-ChildItem out -Recurse -Include *.pdb) { throw 'pdb in output' }
+          New-Item -ItemType Directory release | Out-Null
+          Copy-Item out/MTRTracer.exe release/MTRTracer-windows-x64.exe
+      - uses: actions/upload-artifact@v5
+        with:
+          name: windows-x64
+          path: release/*
+          retention-days: 1
+
+  linux:
+    name: Linux ${{ matrix.arch }}
+    needs: ui
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v5
+        with:
+          name: ui-dist
+          path: ui/dist
+      - name: Unit tests (offline)
+        if: matrix.arch == 'x64'
+        run: dotnet test src/MTRTracer.Tests -c Release
+      - name: Publish
+        run: |
+          set -euo pipefail
+          RID=linux-${{ matrix.arch }}
+          OUT=pkg/$RID
+          dotnet publish src/MTRTracer.Linux -c Release -r $RID -o $OUT --self-contained true \
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true \
+            -p:DebugType=none -p:DebugSymbols=false
+          if find $OUT -name '*.pdb' -o -name '*.dbg' | grep -q .; then echo 'debug files in output'; exit 1; fi
+          cp src/MTRTracer.Linux/mtrtracer.png packaging/linux/mtrtracer.desktop packaging/linux/install.sh $OUT/
+          chmod +x $OUT/MTRTracer $OUT/install.sh
+          ls -la $OUT
+          mkdir -p release
+          tar --owner=0 --group=0 --numeric-owner -czf release/mtrtracer-$RID.tar.gz -C pkg $RID
+      - uses: actions/upload-artifact@v5
+        with:
+          name: linux-${{ matrix.arch }}
+          path: release/*
+          retention-days: 1
+
+  release:
+    name: GitHub Release
+    needs: [windows, linux]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          path: assets
+          merge-multiple: true
+      - name: Checksums
+        working-directory: assets
+        run: |
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if [ -f .github/release-notes.md ]; then cp .github/release-notes.md notes.md; else echo "MTRTracer $TAG" > notes.md; fi
+          gh release create "$TAG" assets/* --title "MTRTracer $TAG" --notes-file notes.md --verify-tag

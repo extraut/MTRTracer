@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=MTRTracer
+GenericName=Трассировка маршрута
+Comment=Маршрут до узла с задержками, потерями, картой и историей
+Exec=@EXEC@
+Icon=mtrtracer
+Terminal=false
+Categories=Network;Utility;
+Keywords=traceroute;mtr;ping;network;vpn;
+StartupWMClass=MTRTracer

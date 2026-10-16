@@ -1,0 +1,79 @@
+/* MTRTracer design tokens.
+   Scene: someone diagnosing lag or a flaky VPN in the evening, the window open for an hour beside a game
+   or a terminal, glancing between numbers and the map. Dark graphite ground with a faint blue cast;
+   one restrained periwinkle accent for selection and primary action; chroma reserved for latency/loss data. */
+
+:root {
+  color-scheme: dark;
+
+  /* Neutrals: tinted toward the accent hue (265). */
+  --bg: oklch(0.178 0.006 265);
+  --bg-raised: oklch(0.205 0.007 265);
+  --bg-sunken: oklch(0.158 0.006 265);
+  --bg-hover: oklch(0.235 0.008 265);
+  --bg-active: oklch(0.265 0.01 265);
+  --bg-overlay: oklch(0.12 0.006 265 / 0.72);
+  --line: oklch(0.285 0.009 265);
+  --line-soft: oklch(0.24 0.008 265);
+  --line-strong: oklch(0.36 0.01 265);
+
+  --text: oklch(0.935 0.006 265);
+  --text-2: oklch(0.75 0.012 265);
+  --text-3: oklch(0.585 0.014 265);
+  --text-4: oklch(0.46 0.014 265);
+
+  --accent: oklch(0.76 0.115 272);
+  --accent-strong: oklch(0.7 0.14 272);
+  --accent-ink: oklch(0.2 0.04 272);
+  --accent-soft: oklch(0.76 0.115 272 / 0.14);
+  --accent-line: oklch(0.76 0.115 272 / 0.45);
+
+  /* Data scale: latency good -> bad, loss. */
+  --lat-0: oklch(0.8 0.135 160);
+  --lat-1: oklch(0.85 0.14 125);
+  --lat-2: oklch(0.83 0.145 88);
+  --lat-3: oklch(0.74 0.16 55);
+  --lat-4: oklch(0.67 0.19 27);
+
+  --ok: var(--lat-0);
+  --warn: var(--lat-2);
+  --bad: var(--lat-4);
+  --ok-soft: oklch(0.8 0.135 160 / 0.12);
+  --warn-soft: oklch(0.83 0.145 88 / 0.12);
+  --bad-soft: oklch(0.67 0.19 27 / 0.14);
+
+  /* Type */
+  --font-ui: 'Geist Variable', 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'Cascadia Mono', Consolas, monospace;
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
+
+  /* Space (4px grid) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 20px;
+  --s6: 24px;
+  --s8: 32px;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1); /* quint-ish */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
+
+  --titlebar-h: 46px;
+  --statusbar-h: 26px;
+  --row-h: 32px;
+
+  --shadow-pop: 0 12px 32px oklch(0.08 0.01 265 / 0.55), 0 0 0 1px var(--line);
+}

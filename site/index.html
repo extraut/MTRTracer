@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>MTRTracer: трассировка маршрута с картой, VPN-режимом и историей</title>
+    <meta name="description" content="MTRTracer показывает каждый узел маршрута до сайта или сервера: потери, задержки, джиттер, место на карте, работу через VPN и историю замеров. Windows и Linux, без прав администратора." />
+    <meta name="theme-color" content="#17181c" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="preload" href="assets/fonts/geist-cyrillic-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="assets/site.css?v=6" />
+  </head>
+  <body>
+    <header class="site-head">
+      <div class="wrap">
+        <a class="brand" href="index.html" aria-label="MTRTracer, на главную">
+          <img src="assets/icon.svg" width="26" height="26" alt="" />
+          MTRTracer
+        </a>
+        <nav class="nav" aria-label="Разделы">
+          <a href="#features">Возможности</a>
+          <a href="#vpn">VPN</a>
+          <a href="#compare">Сравнение</a>
+          <a href="#limits">Ограничения</a>
+          <a href="#install">Установка</a>
+          <a href="docs.html">Документация</a>
+          <a href="https://github.com/extraut/MTRTracer">GitHub</a>
+        </nav>
+        <a class="btn sm primary head-cta" href="https://github.com/extraut/MTRTracer/releases/latest">Скачать</a>
+        <button class="btn sm menu-btn" type="button" aria-expanded="false" aria-label="Меню">Меню</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero">
+        <div class="wrap">
+          <h1 class="reveal">Видно каждый узел. <span class="soft">И где именно теряются пакеты.</span></h1>
+          <p class="hero-lede reveal">
+            MTRTracer прокладывает маршрут до любого сайта, игрового сервера или IP и держит его под наблюдением: потери и задержка на каждом хопе,
+            джиттер, место узлов на карте, честный режим для VPN и журнал, по которому видно, что днём было хорошо, а вечером стало плохо.
+          </p>
+          <div class="hero-cta reveal">
+            <a class="btn primary" href="https://github.com/extraut/MTRTracer/releases/latest">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M1 3.2 6.6 2.4v5.3H1zm6.4-.9L15 1.2v6.5H7.4zM1 8.4h5.6v5.3L1 12.9zm6.4 0H15v6.4l-7.6-1.1z" /></svg>
+              Для Windows
+            </a>
+            <a class="btn primary" href="https://github.com/extraut/MTRTracer/releases/latest">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M5.5 6c0-2 1-3.5 2.5-3.5S10.5 4 10.5 6c0 1.6 1.7 3.2 2 5.3.2 1.4-.8 2.2-2 2.2H5.5c-1.2 0-2.2-.8-2-2.2.3-2.1 2-3.7 2-5.3Z" /><circle cx="7" cy="5.4" r=".5" fill="currentColor" /><circle cx="9" cy="5.4" r=".5" fill="currentColor" /></svg>
+              Для Linux
+            </a>
+            <a class="btn" href="https://github.com/extraut/MTRTracer"><svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+              GitHub</a>
+            <a class="btn" href="docs.html">Документация</a>
+          </div>
+          <p class="hero-meta reveal">Windows 10/11 и Linux x64/arm64 · прав администратора не нужно · работает офлайн, онлайн-уточнения по желанию</p>
+
+          <div class="showcase reveal" aria-label="Живая демонстрация интерфейса">
+            <div class="appwin">
+              <div class="aw-bar">
+                <img src="assets/icon.svg" width="18" height="18" alt="" />
+                <div class="aw-field"><span class="aw-dot"></span>google.com</div>
+                <span class="aw-chip">Ethernet · 10.0.0.2</span>
+                <span class="aw-chip on">Карта</span>
+              </div>
+              <div class="aw-body">
+                <div class="aw-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Узел</th>
+                        <th>Loss%</th>
+                        <th>Sent</th>
+                        <th>Last</th>
+                        <th>Avg</th>
+                        <th>Best</th>
+                        <th>Worst</th>
+                        <th style="text-align: left">История</th>
+                      </tr>
+                    </thead>
+                    <tbody id="aw-rows"></tbody>
+                  </table>
+                </div>
+                <div class="aw-map">
+                  <svg id="aw-svg" role="img" aria-label="Карта маршрута: Варшава, Берлин, Гамбург, Амстердам, Франкфурт"></svg>
+                  <div class="sum"><b>4 точки</b> · путь 1 505 км · по прямой 890 км: минимум <b>8.9</b>, измерено <b>25.6</b> мс</div>
+                </div>
+              </div>
+              <div class="aw-foot">
+                <span style="color: var(--ok)">● Идёт трассировка</span>
+                <span class="mono">10.0.0.2 → 142.250.185.78</span>
+                <span id="aw-round">раунд 1</span>
+                <span id="aw-dest"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section id="features">
+        <div class="wrap">
+          <p class="kicker reveal">Возможности</p>
+          <h2 class="reveal">Всё, что делал WinMTR, и всё, чего ему не хватало</h2>
+          <p class="lede reveal">
+            Одна программа вместо связки из tracert, ping, WinMTR, сайтов «где мой IP» и ручных записей в блокноте. Каждая цифра проверяема: за ней стоит
+            сырой лог пакетов, а у каждой геоточки виден источник и дата.
+          </p>
+
+          <div class="feature reveal">
+            <div>
+              <h3>Хопы со всей статистикой mtr</h3>
+              <p>
+                На каждый TTL свой поток, пакеты уходят параллельно, как в WinMTR. Задержка меряется таймером высокого разрешения с точностью до
+                микросекунд, а не округляется до миллисекунды.
+              </p>
+              <ul>
+                <li>Несколько узлов на одном хопе (балансировка ECMP) видны отдельно, с долей ответов</li>
+                <li>Смена маршрута, серии потерь и обрывы попадают в события с точным временем</li>
+                <li>Если цель молчит на ICMP, включается TCP-пинг 443/80</li>
+                <li>Поиск Path MTU и сравнение DNS-серверов по кнопке</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <div class="cols">
+                <div class="col"><b>Loss%</b><span>доля потерянных пакетов</span></div>
+                <div class="col"><b>Sent / Recv</b><span>отправлено и получено</span></div>
+                <div class="col"><b>Last</b><span>последний RTT</span></div>
+                <div class="col"><b>Avg</b><span>среднее</span></div>
+                <div class="col"><b>Best / Worst</b><span>минимум и максимум</span></div>
+                <div class="col"><b>StDev</b><span>разброс задержки</span></div>
+                <div class="col"><b>Gmean</b><span>среднее геометрическое</span></div>
+                <div class="col"><b>Jttr / Javg</b><span>джиттер, текущий и средний</span></div>
+                <div class="col"><b>Jmax</b><span>худший скачок</span></div>
+                <div class="col"><b>Jint</b><span>джиттер по RFC 3550</span></div>
+                <div class="col"><b>История</b><span>последние 120 пакетов</span></div>
+                <div class="col"><b>AS · место</b><span>сеть и город</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="feature flip reveal">
+            <div>
+              <h3>Карта, которая сверяется с физикой</h3>
+              <p>
+                Базы геолокации часто ставят магистральный роутер в город, где у оператора офис, а не туда, где стоит железо. MTRTracer опрашивает несколько
+                источников и проверяет каждый по скорости света: за 1 мс задержки сигнал успевает пройти около 100 км туда и обратно в оптоволокне. Место,
+                которое физически недостижимо, помечается, а не выдаётся за правду.
+              </p>
+              <ul>
+                <li>RIPE IPmap по реальным замерам RIPE Atlas, MaxMind GeoLite, DB-IP, имена роутеров, Cloudflare</li>
+                <li>Anycast-адреса вроде 1.1.1.1 ставятся у ближайшего узла, а не в стране регистрации</li>
+                <li>Плоская карта или глобус, офлайн-подложка Natural Earth внутри программы</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <div class="verdicts" aria-label="Пример решения по источникам для одного хопа">
+                <div class="v-row ok"><span class="m">✓</span><span class="src">имя роутера</span><span class="pl">Гамбург, DE</span><span class="why">«hbg» в hbg-bb2-link.ip.twelve99.net, согласуется с RTT</span></div>
+                <div class="v-row ok"><span class="m">✓</span><span class="src">MaxMind GeoLite</span><span class="pl">Hamburg, DE</span><span class="why">совпадает с другим источником</span></div>
+                <div class="v-row no"><span class="m">✕</span><span class="src">DB-IP Lite</span><span class="pl">Ashburn, US</span><span class="why">7 300 км от вас, а RTT 19 мс допускает не больше 1 960 км</span></div>
+                <div class="v-row no"><span class="m">✕</span><span class="src">ip-api.com</span><span class="pl">New York, US</span><span class="why">то же: физически недостижимо</span></div>
+              </div>
+              <div class="formula">
+                расстояние(вы, узел) ≤ <b>100 км</b> × мин. RTT(узла и всех следующих) + 60 км<br />
+                расстояние(вы, пред.) + расстояние(пред., узел) ≤ <b>100 км</b> × RTT + 180 км
+              </div>
+            </div>
+          </div>
+
+          <div class="feature reveal" id="vpn">
+            <div>
+              <h3>VPN без самообмана</h3>
+              <p>
+                Через прокси-туннели вроде Xray, sing-box или Clash пошаговая трассировка невозможна: туннель передаёт только TCP и UDP, а на пинг часто
+                отвечает сам за доли миллисекунды. Обычный трассировщик покажет красивые, но выдуманные цифры. MTRTracer это распознаёт и предлагает
+                VPN-режим.
+              </p>
+              <ul>
+                <li>Находит процесс VPN-клиента и его сервер по таблице соединений</li>
+                <li>Трассирует настоящие хопы до сервера через физический адаптер</li>
+                <li>Меряет сквозную задержку до цели HTTP(S)-запросами через туннель</li>
+                <li>Показывает выход VPN и оценку участка «сервер → цель»</li>
+              </ul>
+            </div>
+            <div class="panel">
+              <div class="vpnpath" aria-label="Схема VPN-режима">
+                <div class="vp-node"><i></i>Вы<br /><span class="mono" style="font-size: 11px">Ethernet</span></div>
+                <div class="vp-link"><small>9 настоящих хопов</small></div>
+                <div class="vp-node"><i class="sq"></i>Сервер VPN<br /><span class="mono" style="font-size: 11px">Стокгольм</span></div>
+                <div class="vp-link tunnel"><small>туннель</small></div>
+                <div class="vp-node"><i class="t"></i>Цель<br /><span class="mono" style="font-size: 11px">Франкфурт</span></div>
+              </div>
+              <div class="vp-rows">
+                <div><span>До сервера VPN (ICMP, через Ethernet)</span><span>33.7 мс</span></div>
+                <div class="t"><span>Сквозная задержка через туннель (HTTPS)</span><span>65.2 мс</span></div>
+                <div><span>Оценка участка сервер → цель</span><span>≈ 29.4 мс</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="feature flip reveal">
+            <div>
+              <h3>История: днём и вечером</h3>
+              <p>
+                Каждый запуск сохраняется сам: снимок раз в минуту и при остановке, хранение полгода. Видно, когда цель стала отвечать хуже, менялся ли
+                маршрут и как выглядели те же хопы в прошлый раз.
+              </p>
+              <ul>
+                <li>График средней задержки и потерь по всем запускам цели</li>
+                <li>Пометка «маршрут изменился» между соседними запусками</li>
+                <li>Сравнение двух запусков бок о бок по каждому хопу с разницей</li>
+                <li>При новом запуске строка «В прошлый раз: …, сейчас: …»</li>
+              </ul>
+            </div>
+            <div class="panel hist">
+              <svg viewBox="0 0 520 190" role="img" aria-label="График средней задержки по запускам за три дня">
+                <g stroke="rgba(120,124,140,.14)">
+                  <line x1="40" y1="20" x2="510" y2="20" /><line x1="40" y1="70" x2="510" y2="70" /><line x1="40" y1="120" x2="510" y2="120" /><line x1="40" y1="160" x2="510" y2="160" />
+                </g>
+                <g fill="#7d8090" font-size="11" font-family="Geist, sans-serif">
+                  <text x="4" y="24">80 мс</text><text x="4" y="74">55 мс</text><text x="4" y="124">30 мс</text>
+                  <text x="60" y="182">13 окт</text><text x="200" y="182">14 окт</text><text x="340" y="182">15 окт</text><text x="460" y="182">сегодня</text>
+                </g>
+                <polyline points="60,92 130,90 200,86 250,58 300,91 360,89 420,92 470,50 500,90" fill="none" stroke="#9b9cf0" stroke-width="2" />
+                <g fill="#9b9cf0"><circle cx="60" cy="92" r="3.5" /><circle cx="130" cy="90" r="3.5" /><circle cx="200" cy="86" r="3.5" /><circle cx="300" cy="91" r="3.5" /><circle cx="360" cy="89" r="3.5" /><circle cx="420" cy="92" r="3.5" /><circle cx="500" cy="90" r="3.5" /></g>
+                <g fill="#ecbf4f"><circle cx="250" cy="58" r="5" /><circle cx="470" cy="50" r="5" /></g>
+                <g font-size="11" font-family="Geist, sans-serif" fill="#ecbf4f"><text x="226" y="46">21:40</text><text x="448" y="38">22:05</text></g>
+              </svg>
+              <div class="hist-legend"><span>● средняя задержка до цели</span><span style="color: var(--warn)">● вечерние запуски: маршрут изменился</span></div>
+            </div>
+          </div>
+
+          <div class="feature reveal">
+            <div>
+              <h3>Разбор, где проблема настоящая</h3>
+              <p>
+                Самая частая ошибка при чтении MTR: испугаться потерь на промежуточном хопе. Роутеры ограничивают ответы на ICMP, и если дальше пакеты
+                проходят, это не проблема. MTRTracer разбирает таблицу по тем же правилам, что и опытный сетевик, и пишет выводы человеческим языком.
+              </p>
+            </div>
+            <div class="panel">
+              <div class="insights">
+                <div class="ins ok"><span class="i">✓</span><span><b>Маршрут стабилен:</b> 0% потерь до цели, средняя задержка 25.6 мс.</span></div>
+                <div class="ins info"><span class="i">i</span><span>Хоп 4: 31% потерь, но дальше пакеты проходят. Роутер ограничивает ответы ICMP, на трафик это не влияет.</span></div>
+                <div class="ins warn"><span class="i">!</span><span>Задержка растёт на +19 мс между хопами 7 и 8. Часто это длинный магистральный канал.</span></div>
+                <div class="ins err"><span class="i">!</span><span><b>Потери 6% до цели начинаются на хопе 9</b> и сохраняются дальше. Вероятное место проблемы.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="feature flip reveal">
+            <div>
+              <h3>Кто занимает канал</h3>
+              <p>
+                Вкладка соединений показывает, какие программы прямо сейчас держат TCP и UDP-соединения, куда, через какой интерфейс и как давно. Правый
+                клик по строке: трассировать до этого адреса, напрямую или через VPN, скопировать адрес, открыть папку программы.
+              </p>
+            </div>
+            <div class="panel">
+              <div class="vp-rows" style="margin: 0">
+                <div><span>chrome · <span class="mono">fra16s56-in-f14.1e100.net:443</span></span><span>DE · Ethernet</span></div>
+                <div><span>Telegram · <span class="mono">149.154.167.51:443</span></span><span>NL · tun0</span></div>
+                <div><span>steam · <span class="mono">185.25.182.77:27017</span></span><span>SE · Ethernet</span></div>
+                <div class="t"><span>Трассировать до узла · Трассировать через VPN · Копировать IP:порт</span><span>ПКМ</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="compare">
+        <div class="wrap">
+          <p class="kicker reveal">Сравнение</p>
+          <h2 class="reveal">Чем отличается от привычных инструментов</h2>
+          <p class="lede reveal">Каждый из них хорош в своём. Таблица о том, что приходится собирать вручную, если пользоваться только ими.</p>
+          <div class="compare-wrap reveal">
+            <table class="compare">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th class="us">MTRTracer</th>
+                  <th>WinMTR</th>
+                  <th>mtr (Linux)</th>
+                  <th>tracert / traceroute</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td>Непрерывная статистика по хопам</td><td class="us y">да, 13 метрик</td><td class="y">да, базовые</td><td class="y">да</td><td class="n">один проход</td></tr>
+                <tr><td>Выбор сетевого адаптера</td><td class="us y">да, с подробностями</td><td class="n">нет</td><td class="p">по адресу или интерфейсу</td><td class="p">по адресу</td></tr>
+                <tr><td>Узлы на карте с проверкой по RTT</td><td class="us y">да</td><td class="n">нет</td><td class="n">нет</td><td class="n">нет</td></tr>
+                <tr><td>AS и провайдер узлов</td><td class="us y">да, по BGP</td><td class="n">нет</td><td class="y">да (-z)</td><td class="n">нет</td></tr>
+                <tr><td>Понимает прокси-VPN и поддельные ответы</td><td class="us y">да, VPN-режим</td><td class="n">нет</td><td class="n">нет</td><td class="n">нет</td></tr>
+                <tr><td>История и сравнение запусков</td><td class="us y">да</td><td class="n">нет</td><td class="n">нет</td><td class="n">нет</td></tr>
+                <tr><td>Разбор результатов словами</td><td class="us y">да</td><td class="n">нет</td><td class="n">нет</td><td class="n">нет</td></tr>
+                <tr><td>Соединения процессов</td><td class="us y">да</td><td class="n">нет</td><td class="n">нет</td><td class="n">нет</td></tr>
+                <tr><td>UDP и TCP-трассировка</td><td class="us p">TCP-пинг цели</td><td class="n">нет</td><td class="y">да (-u, -T)</td><td class="p">зависит от ОС</td></tr>
+                <tr><td>Права администратора</td><td class="us y">не нужны</td><td class="y">не нужны</td><td class="p">setuid-помощник</td><td class="y">не нужны</td></tr>
+                <tr><td>Платформы</td><td class="us">Windows, Linux</td><td>Windows</td><td>Linux, macOS</td><td>все</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section id="limits">
+        <div class="wrap">
+          <p class="kicker reveal">Честно</p>
+          <h2 class="reveal">Где могут быть проблемы</h2>
+          <p class="lede reveal">Сетевая диагностика упирается в то, как устроен интернет. Вот что важно знать заранее, чтобы правильно читать результат.</p>
+          <div class="limits">
+            <div class="limit reveal">
+              <h3>Геолокация роутеров приблизительна</h3>
+              <p>Обычно точность до города, иногда сотни километров. Проверка по скорости света отсекает невозможное, но не делает данные точными. Точки, которые не сходятся с задержкой, помечены знаком «?».</p>
+            </div>
+            <div class="limit reveal">
+              <h3>Прокси-туннель скрывает хопы</h3>
+              <p>Через Xray, sing-box, Clash видно только путь до сервера VPN и сквозную задержку. Это свойство туннеля: никакая программа не увидит хопы за ним.</p>
+            </div>
+            <div class="limit reveal">
+              <h3>Роутеры режут ICMP</h3>
+              <p>Потери и задержка на промежуточном хопе могут быть артефактом: роутер отвечает на пинг в последнюю очередь. Смотрите, сохраняется ли это до цели. Разбор подсказывает.</p>
+            </div>
+            <div class="limit reveal">
+              <h3>UDP-туннели не видны в таблице</h3>
+              <p>WireGuard, Hysteria и другие UDP-протоколы не раскрывают адрес сервера в таблице соединений. Для VPN-режима его нужно один раз вписать вручную.</p>
+            </div>
+            <div class="limit reveal">
+              <h3>Linux: права на ICMP</h3>
+              <p>Работает без root через ping-сокеты, если это разрешено настройкой ping_group_range (так по умолчанию в Ubuntu, Fedora, Debian 12, Arch). Иначе одна команда sysctl или setcap.</p>
+            </div>
+            <div class="limit reveal">
+              <h3>Антивирусы и неподписанный exe</h3>
+              <p>Программа работает с сетью на низком уровне и перечисляет соединения процессов. Некоторые антивирусы настороженно относятся к такому неподписанному файлу. Исходники открыты, собрать можно самому.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="privacy">
+        <div class="wrap">
+          <p class="kicker reveal">Приватность</p>
+          <h2 class="reveal">Что и куда уходит из программы</h2>
+          <p class="lede reveal">Ничего не отправляется без причины. Всё онлайн отключается одним переключателем, базовая работа остаётся офлайн.</p>
+          <div class="netlist reveal">
+            <div class="netrow"><b>Пакеты трассировки</b><p>С адреса выбранного адаптера к роутерам по пути. Если выбрать Ethernet в обход VPN, роутеры видят ваш реальный IP.</p><span class="tag">суть работы</span></div>
+            <div class="netrow"><b>Офлайн-база DB-IP Lite</b><p>Около 60 МБ скачивается один раз и проверяется на новый выпуск раз в месяц.</p><span class="tag ok">раз в месяц</span></div>
+            <div class="netrow"><b>RIPE IPmap, RIPEstat, ip-api.com</b><p>Адреса узлов маршрута, чтобы узнать место, сеть и провайдера. Ответы кешируются на диске.</p><span class="tag warn">можно выключить</span></div>
+            <div class="netrow"><b>Cloudflare</b><p>Ваше местоположение по IP физического адаптера. Город можно указать вручную, тогда запроса нет.</p><span class="tag warn">можно выключить</span></div>
+            <div class="netrow"><b>Подложка карты онлайн</b><p>Только если включить подробную карту OpenFreeMap. По умолчанию карта полностью офлайн.</p><span class="tag ok">по кнопке</span></div>
+            <div class="netrow"><b>Аналитика, телеметрия</b><p>Нет. Программа никуда не отправляет статистику использования.</p><span class="tag ok">нет</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="install">
+        <div class="wrap">
+          <p class="kicker reveal">Установка</p>
+          <h2 class="reveal">Скачать или собрать самому</h2>
+          <p class="lede reveal">
+            Готовые сборки лежат в <a href="https://github.com/extraut/MTRTracer/releases/latest">GitHub Releases</a>: их собирает GitHub Actions прямо из исходников репозитория, рядом лежат контрольные суммы SHA-256.
+            Можно собрать и самому: одним скриптом, без Visual Studio, результат запускается без установки .NET.
+          </p>
+          <div class="tabs reveal">
+            <div class="tablist" role="tablist" aria-label="Платформа">
+              <button role="tab" id="t-win" aria-controls="p-win" aria-selected="true">Windows</button>
+              <button role="tab" id="t-linux" aria-controls="p-linux" aria-selected="false">Linux</button>
+            </div>
+            <div class="tabpanel" id="p-win" role="tabpanel" aria-labelledby="t-win">
+              <ol class="steps">
+                <li><div><p>Скачать <code>MTRTracer-windows-x64.exe</code> со страницы релиза и запустить. Установка не нужна, нужен WebView2 Runtime (в Windows 11 он уже есть). Файл не подписан, поэтому SmartScreen может спросить подтверждение: «Подробнее» → «Выполнить в любом случае».</p><p><a class="btn sm primary" href="https://github.com/extraut/MTRTracer/releases/latest">Открыть релизы на GitHub</a></p></div></li>
+                <li><div><p>Или собрать из <a href="https://github.com/extraut/MTRTracer">исходников</a>. Один раз поставить инструменты сборки:</p><pre data-copy><span class="k">winget</span> install Microsoft.DotNet.SDK.10
+<span class="k">winget</span> install OpenJS.NodeJS.LTS</pre></div></li>
+                <li><div><p>В папке проекта запустить сборку:</p><pre data-copy><span class="k">powershell</span> -ExecutionPolicy Bypass -File .\build.ps1</pre></div></li>
+                <li><div><p>Готовый файл: <code>dist\MTRTracer.exe</code>. Нужен WebView2 Runtime, в Windows 11 он уже есть. Флаг <code>-Linux</code> соберёт заодно и Linux-версию.</p></div></li>
+              </ol>
+            </div>
+            <div class="tabpanel" id="p-linux" role="tabpanel" aria-labelledby="t-linux" hidden>
+              <ol class="steps" id="install-linux">
+                <li><div><p>Скачать <code>mtrtracer-linux-x64.tar.gz</code> (или <code>arm64</code>) со страницы релиза. Для окна нужен WebKitGTK: <code>sudo apt install libwebkit2gtk-4.1-0 libnotify4</code>.</p><p><a class="btn sm primary" href="https://github.com/extraut/MTRTracer/releases/latest">Открыть релизы на GitHub</a></p></div></li>
+                <li><div><p>Или собрать из <a href="https://github.com/extraut/MTRTracer">исходников</a>. Инструменты сборки и окно (пример для Ubuntu/Debian):</p><pre data-copy><span class="k">sudo apt</span> install dotnet-sdk-10.0 nodejs npm libwebkit2gtk-4.1-0 libnotify4</pre></div></li>
+                <li><div><p>Собрать архив:</p><pre data-copy><span class="k">./build.sh</span>                 <span class="c"># linux-x64</span>
+<span class="k">./build.sh</span> --arch arm64     <span class="c"># Raspberry Pi, ARM-серверы</span></pre></div></li>
+                <li><div><p>Установить для своего пользователя, без root (архив из релиза или из <code>dist-linux/</code>):</p><pre data-copy><span class="k">tar</span> -xzf mtrtracer-linux-x64.tar.gz
+<span class="k">cd</span> linux-x64 &amp;&amp; ./install.sh</pre></div></li>
+                <li><div><p>Запуск из меню приложений или командой <code>mtrtracer</code>. Без WebKitGTK: <code>mtrtracer --browser</code>, интерфейс откроется в браузере.</p></div></li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq">
+        <div class="wrap">
+          <p class="kicker reveal">Вопросы</p>
+          <h2 class="reveal">Коротко о частом</h2>
+          <div class="faq reveal">
+            <details>
+              <summary>Почему через VPN все хопы показывают таймаут или 0 мс?</summary>
+              <p>Прокси-туннель не пропускает пакеты с малым TTL и часто сам отвечает на пинг. Включите VPN-режим: он покажет настоящие хопы до сервера VPN и честную задержку до цели через туннель.</p>
+            </details>
+            <details>
+              <summary>Нужны ли права администратора?</summary>
+              <p>Нет. На Windows используется системный ICMP API, на Linux непривилегированные ping-сокеты. Только если в вашем Linux они запрещены, понадобится одна команда sysctl или setcap.</p>
+            </details>
+            <details>
+              <summary>Почему на промежуточном хопе 40% потерь, а у цели 0%?</summary>
+              <p>Роутер ограничивает ответы на ICMP, а транзитный трафик пропускает. Это нормально. Проблема настоящая, только если потери сохраняются до самой цели.</p>
+            </details>
+            <details>
+              <summary>Насколько точна карта?</summary>
+              <p>Обычно до города. Программа проверяет каждую точку по физике: если база ставит узел туда, куда сигнал не успевает долететь, точка помечается «?». Источники и причины видны в деталях хопа.</p>
+            </details>
+            <details>
+              <summary>Можно ли сравнить, как было днём и вечером?</summary>
+              <p>Да. Каждый запуск сохраняется в историю, во вкладке «История» есть график по запускам и сравнение двух запусков по хопам.</p>
+            </details>
+          </div>
+          <p style="margin-top: 28px"><a href="docs.html">Всё подробно в документации →</a></p>
+        </div>
+      </section>
+
+      <div class="final">
+        <div class="wrap">
+          <h2 class="reveal">Следующий лаг вы увидите хоп за хопом</h2>
+          <div class="hero-cta reveal">
+            <a class="btn primary" href="https://github.com/extraut/MTRTracer/releases/latest">Скачать на GitHub</a>
+            <a class="btn" href="https://github.com/extraut/MTRTracer">Исходный код</a>
+            <a class="btn" href="docs.html">Открыть документацию</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-foot">
+      <div class="wrap">
+        <span>MTRTracer · Windows и Linux · <a href="https://github.com/extraut/MTRTracer">GitHub</a></span>
+        <span>Карта: Natural Earth · Геоданные: RIPE IPmap, MaxMind GeoLite, DB-IP (CC BY 4.0), Cloudflare · Шрифты: Geist, JetBrains Mono (OFL)</span>
+      </div>
+    </footer>
+
+    <script src="assets/europe.js"></script>
+    <script src="assets/site.js?v=6"></script>
+  </body>
+</html>

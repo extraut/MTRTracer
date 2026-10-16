@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ['site/**', '**.md']
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: '1'
+  DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - run: npm ci && npm run build
+        working-directory: ui
+      - run: dotnet test src/MTRTracer.Tests -c Release
+      - name: Build app
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then dotnet build src/MTRTracer.App -c Release; else dotnet build src/MTRTracer.Linux -c Release; fi

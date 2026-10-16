@@ -1,0 +1,14 @@
+bin/
+obj/
+dist/
+node_modules/
+ui/dist/
+*.user
+.vs/
+dist-linux/
+
+# local only
+.claude/
+PRODUCT.md
+/package-lock.json
+*.pdb
